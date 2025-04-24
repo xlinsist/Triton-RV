@@ -1,0 +1,73 @@
+benchmark,shape,strategy,speedup
+matmul,"(32, 32, 32)",triton-T1,13.0601
+matmul,"(32, 32, 32)",triton-T4,14.283
+matmul,"(32, 32, 32)",triton-T8,13.612
+matmul,"(32, 32, 32)",OUR,14.283
+matmul,"(64, 64, 64)",triton-T1,1.075
+matmul,"(64, 64, 64)",triton-T4,1.0777
+matmul,"(64, 64, 64)",triton-T8,1.0532
+matmul,"(64, 64, 64)",OUR,1.0777
+matmul,"(128, 128, 128)",triton-T1,2.145
+matmul,"(128, 128, 128)",triton-T4,2.5342
+matmul,"(128, 128, 128)",triton-T8,2.62
+matmul,"(128, 128, 128)",OUR,2.62
+dropout,"(512,)",triton-T1,6.6716
+dropout,"(512,)",triton-T4,6.5905
+dropout,"(512,)",triton-T8,9.3002
+dropout,"(512,)",OUR,9.3002
+dropout,"(1024,)",triton-T1,10.8684
+dropout,"(1024,)",triton-T4,11.7836
+dropout,"(1024,)",triton-T8,10.4632
+dropout,"(1024,)",OUR,11.7836
+dropout,"(2048,)",triton-T1,8.9412
+dropout,"(2048,)",triton-T4,6.3863
+dropout,"(2048,)",triton-T8,8.1059
+dropout,"(2048,)",OUR,8.9412
+correlation,"(1, 1, 32, 32)",triton-T1,1.1282
+correlation,"(1, 1, 32, 32)",triton-T4,1.0745
+correlation,"(1, 1, 32, 32)",triton-T8,1.0478
+correlation,"(1, 1, 32, 32)",OUR,1.1282
+correlation,"(4, 4, 32, 32)",triton-T1,1.9956
+correlation,"(4, 4, 32, 32)",triton-T4,1.5207
+correlation,"(4, 4, 32, 32)",triton-T8,1.5733
+correlation,"(4, 4, 32, 32)",OUR,1.9956
+correlation,"(4, 4, 64, 64)",triton-T1,1.0645
+correlation,"(4, 4, 64, 64)",triton-T4,1.142
+correlation,"(4, 4, 64, 64)",triton-T8,1.0665
+correlation,"(4, 4, 64, 64)",OUR,1.142
+layernorm,"(64, 64)",triton-T1,3.8679
+layernorm,"(64, 64)",triton-T4,3.6511
+layernorm,"(64, 64)",triton-T8,3.675
+layernorm,"(64, 64)",OUR,3.8679
+layernorm,"(256, 256)",triton-T1,1.4976
+layernorm,"(256, 256)",triton-T4,1.4961
+layernorm,"(256, 256)",triton-T8,1.5152
+layernorm,"(256, 256)",OUR,1.5152
+layernorm,"(1024, 1024)",triton-T1,2.4236
+layernorm,"(1024, 1024)",triton-T4,4.1033
+layernorm,"(1024, 1024)",triton-T8,4.4599
+layernorm,"(1024, 1024)",OUR,4.4599
+resize,"(32, 32, 1)",triton-T1,1.309
+resize,"(32, 32, 1)",triton-T4,1.4678
+resize,"(32, 32, 1)",triton-T8,1.4387
+resize,"(32, 32, 1)",OUR,1.4678
+resize,"(32, 128, 1)",triton-T1,0.9993
+resize,"(32, 128, 1)",triton-T4,1.6845
+resize,"(32, 128, 1)",triton-T8,2.2479
+resize,"(32, 128, 1)",OUR,2.2479
+resize,"(64, 128, 1)",triton-T1,1.1371
+resize,"(64, 128, 1)",triton-T4,2.1787
+resize,"(64, 128, 1)",triton-T8,2.7758
+resize,"(64, 128, 1)",OUR,2.7758
+rope,"(64, 4, 4, 256)",triton-T1,1.0379
+rope,"(64, 4, 4, 256)",triton-T4,2.133
+rope,"(64, 4, 4, 256)",triton-T8,2.3474
+rope,"(64, 4, 4, 256)",OUR,2.3474
+rope,"(256, 1, 4, 256)",triton-T1,1.0477
+rope,"(256, 1, 4, 256)",triton-T4,2.0305
+rope,"(256, 1, 4, 256)",triton-T8,2.4757
+rope,"(256, 1, 4, 256)",OUR,2.4757
+rope,"(256, 4, 4, 64)",triton-T1,1.0727
+rope,"(256, 4, 4, 64)",triton-T4,1.6912
+rope,"(256, 4, 4, 64)",triton-T8,2.0146
+rope,"(256, 4, 4, 64)",OUR,2.0146

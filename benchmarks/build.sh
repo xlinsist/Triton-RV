@@ -115,6 +115,7 @@ build_triton_kernel_lib_and_driver() {
   ### FIXME: How to specify which kernel to enable among multiple kernels, and whether to enable them simultaneously
   ### Two parameters may be needed to control, one parameter controls ENABLE, and the other parameter controls which ENABLE.
   ENABLE_AUTOTUNING=${TUNNING_ARG} KERNEL_LAUNCHER_INCLUDE_DIR=${KERNEL_LAUNCHER_INCLUDE_DIR} KERNEL_AUX_FILE_DIR=${KERNEL_AUX_FILE_DIR} ${PYC} ${TRITON_KERNEL}
+  # echo "ENABLE_AUTOTUNING=${TUNNING_ARG} KERNEL_LAUNCHER_INCLUDE_DIR=${KERNEL_LAUNCHER_INCLUDE_DIR} KERNEL_AUX_FILE_DIR=${KERNEL_AUX_FILE_DIR} ${PYC} ${TRITON_KERNEL}"
 
   driver_name=`basename ${DRIVER} .cpp`
 
@@ -332,8 +333,9 @@ esac
 # Main function to build driver. Make your changes here if you need
 ################################################################################
 
-# BENCHMARKS=("matmul" "layernorm" "correlation" "dropout")
-BENCHMARKS=("matmul")
+# BENCHMARKS=("layernorm" "correlation" "dropout" "resize" "softmax")
+# BENCHMARKS=("correlation")
+BENCHMARKS=("rope")
 
 for BENCHMARK in "${BENCHMARKS[@]}"; do
   # Array of "c_kernel triton_kernel driver_path tuning_arg" entries
@@ -365,17 +367,17 @@ for BENCHMARK in "${BENCHMARKS[@]}"; do
       ;;
     "resize")
       drivers=(
-        # "${SRC_DIR}/c/resize.cpp ${SRC_DIR}/triton/resize.py ${SRC_DIR}/main/resize.cpp resize_kernel"
+        "${SRC_DIR}/c/resize.cpp ${SRC_DIR}/triton/resize.py ${SRC_DIR}/main/resize.cpp resize_kernel"
       )
       ;;
     "rope")
       drivers=(
-        # "${SRC_DIR}/c/rope.cpp ${SRC_DIR}/triton/rope.py ${SRC_DIR}/main/rope.cpp rope_kernel"
+        "${SRC_DIR}/c/rope.cpp ${SRC_DIR}/triton/rope.py ${SRC_DIR}/main/rope.cpp rope_kernel"
       )
       ;;
     "warp")
       drivers=(
-        # "${SRC_DIR}/c/warp.cpp ${SRC_DIR}/triton/warp.py ${SRC_DIR}/main/warp.cpp warp_kernel"
+        "${SRC_DIR}/c/warp.cpp ${SRC_DIR}/triton/warp.py ${SRC_DIR}/main/warp.cpp warp_kernel"
       )
       ;;
     *)

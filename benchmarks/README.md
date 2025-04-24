@@ -97,9 +97,9 @@ $ git clone git@github.com:llvm/llvm-project.git
 $ mkdir llvm-project/build
 $ cd llvm-project/build
 $ git checkout 86b69c3 # Ensure it matches the version used by triton-cpu
-$ cmake -G Ninja ../llvm-project \
+$ cmake -G Ninja ../llvm \
     -DLLVM_ENABLE_PROJECTS="mlir;clang;openmp" \
-    -DLLVM_TARGETS_TO_BUILD="host;riscv" \
+    -DLLVM_TARGETS_TO_BUILD="host;RISCV" \
     -DOPENMP_ENABLE_LIBOMPTARGET=OFF \
     -DLLVM_ENABLE_ASSERTIONS=ON \
     -DCMAKE_BUILD_TYPE=RELEASE
@@ -113,7 +113,7 @@ First, use `build.sh` to cross-compile and generate ELF files locally. Then, tra
 
 ```sh
 $ cd benchmarks
-$ ./build.sh rv
+$ ./build.sh --platform rv
 $ ./copy_to_remote.sh # Modify REMOTE IP and file paths accordingly.
 $ <Use SSH to connect to the REMOTE IP>
 
