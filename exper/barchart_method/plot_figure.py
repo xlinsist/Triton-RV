@@ -57,6 +57,7 @@ def plot_dual_axis_bar_chart(input_csv, benchmark):
     
     shapes_to_keep = {
         "matmul": ["(256, 256, 256)"],
+        "softmax": ["(512, 512)"],
     }
     df = df[df.apply(lambda row: row["Shape"] in shapes_to_keep.get(row["Benchmark"], []), axis=1)]
     
@@ -153,6 +154,6 @@ def plot_bar_chart(input_csv, benchmark):
 
 if __name__ == "__main__":
 
-    for benchmark in ["matmul"]:
+    for benchmark in ["softmax"]:
         # plot_bar_chart_with_tuning_time(f'./performance_report.csv', benchmark)
         plot_dual_axis_bar_chart(f'./performance_report.csv', benchmark)
