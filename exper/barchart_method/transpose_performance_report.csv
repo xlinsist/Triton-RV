@@ -1,0 +1,16 @@
+Benchmark,Shape,Method,Time(ms),TuningTime(s),Speedup
+transpose,"(1024, 768)",torch,0.7999600000000001,0.0,1.0
+transpose,"(1024, 768)",triton,0.23379999999999998,4.2757,3.422
+transpose,"(1024, 768)",tvm-naive,1.6266399999999999,0.0,0.492
+transpose,"(1024, 768)",tvm-o1,0.87727,0.0,0.912
+transpose,"(1024, 768)",hidet,1.342835,0.0,0.596
+transpose,"(2048, 1536)",torch,4.61063,0.0,1.0
+transpose,"(2048, 1536)",triton,1.88838,2.9389,2.442
+transpose,"(2048, 1536)",tvm-naive,14.424195,0.0,0.32
+transpose,"(2048, 1536)",tvm-o1,2.189355,0.0,2.106
+transpose,"(2048, 1536)",hidet,1.940675,0.0,2.376
+transpose,"(4096, 3072)",torch,42.25203,0.0,1.0
+transpose,"(4096, 3072)",triton,1.516045,3.5332,27.87
+transpose,"(4096, 3072)",tvm-naive,128.54537,0.0,0.329
+transpose,"(4096, 3072)",tvm-o1,32.84365,0.0,1.286
+transpose,"(4096, 3072)",hidet,5.84331,0.0,7.231

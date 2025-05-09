@@ -8,26 +8,26 @@ matmul,"(64, 64, 64)",OUR,2.6166
 matmul,"(128, 128, 128)",clang,1.0
 matmul,"(128, 128, 128)",triton,7.0019
 matmul,"(128, 128, 128)",OUR,7.0019
-dropout,"(512,)",clang,1.0
-dropout,"(512,)",triton,1.1268
-dropout,"(512,)",OUR,1.1472
-dropout,"(1024,)",clang,1.0
-dropout,"(1024,)",triton,1.2388
-dropout,"(1024,)",OUR,1.2507
-dropout,"(2048,)",clang,1.0
-dropout,"(2048,)",triton,0.8328
-dropout,"(2048,)",OUR,0.9292
-correlation,"(1, 1, 32, 32)",clang,1.0
-correlation,"(1, 1, 32, 32)",triton,0.7072
-correlation,"(1, 1, 32, 32)",OUR,1.0953
-correlation,"(4, 4, 32, 32)",clang,1.0
-correlation,"(4, 4, 32, 32)",triton,0.9455
-correlation,"(4, 4, 32, 32)",OUR,1.079
-correlation,"(4, 4, 64, 64)",clang,1.0
-correlation,"(4, 4, 64, 64)",triton,1.7019
-correlation,"(4, 4, 64, 64)",OUR,1.724
+softmax,"(32, 64)",clang,1.0
+softmax,"(32, 64)",triton,1.3113
+softmax,"(32, 64)",OUR,1.3113
+softmax,"(128, 64)",clang,1.0
+softmax,"(128, 64)",triton,1.5137
+softmax,"(128, 64)",OUR,1.5137
+softmax,"(128, 256)",clang,1.0
+softmax,"(128, 256)",triton,3.1002
+softmax,"(128, 256)",OUR,3.1115
+conv2d,"(1, 1, 32, 32)",clang,1.0
+conv2d,"(1, 1, 32, 32)",triton,1.0953
+conv2d,"(1, 1, 32, 32)",OUR,1.0953
+conv2d,"(4, 4, 32, 32)",clang,1.0
+conv2d,"(4, 4, 32, 32)",triton,1.0394
+conv2d,"(4, 4, 32, 32)",OUR,1.079
+conv2d,"(4, 4, 64, 64)",clang,1.0
+conv2d,"(4, 4, 64, 64)",triton,1.7019
+conv2d,"(4, 4, 64, 64)",OUR,1.724
 layernorm,"(64, 64)",clang,1.0
-layernorm,"(64, 64)",triton,0.814
+layernorm,"(64, 64)",triton,1.1196
 layernorm,"(64, 64)",OUR,1.1196
 layernorm,"(256, 256)",clang,1.0
 layernorm,"(256, 256)",triton,2.3619
@@ -35,15 +35,15 @@ layernorm,"(256, 256)",OUR,2.3619
 layernorm,"(1024, 1024)",clang,1.0
 layernorm,"(1024, 1024)",triton,5.9817
 layernorm,"(1024, 1024)",OUR,6.14
-resize,"(32, 32, 1)",clang,1.0
-resize,"(32, 32, 1)",triton,2.1837
-resize,"(32, 32, 1)",OUR,2.1837
-resize,"(32, 128, 1)",clang,1.0
-resize,"(32, 128, 1)",triton,4.3109
-resize,"(32, 128, 1)",OUR,4.3109
-resize,"(64, 128, 1)",clang,1.0
-resize,"(64, 128, 1)",triton,5.3741
-resize,"(64, 128, 1)",OUR,5.3741
+dropout,"(512,)",clang,1.0
+dropout,"(512,)",triton,1.1472
+dropout,"(512,)",OUR,1.1472
+dropout,"(1024,)",clang,1.0
+dropout,"(1024,)",triton,1.2507
+dropout,"(1024,)",OUR,1.2507
+dropout,"(2048,)",clang,1.0
+dropout,"(2048,)",triton,0.9187
+dropout,"(2048,)",OUR,0.9292
 rope,"(64, 4, 4, 256)",clang,1.0
 rope,"(64, 4, 4, 256)",triton,4.0845
 rope,"(64, 4, 4, 256)",OUR,4.8333

@@ -1,33 +1,33 @@
 benchmark,shape,strategy,speedup
 matmul,"(32, 32, 32)",clang,1.0
-matmul,"(32, 32, 32)",triton,13.612
+matmul,"(32, 32, 32)",triton,14.283
 matmul,"(32, 32, 32)",OUR,14.283
 matmul,"(64, 64, 64)",clang,1.0
-matmul,"(64, 64, 64)",triton,0.9957
+matmul,"(64, 64, 64)",triton,0.891
 matmul,"(64, 64, 64)",OUR,1.0777
 matmul,"(128, 128, 128)",clang,1.0
 matmul,"(128, 128, 128)",triton,2.4915
 matmul,"(128, 128, 128)",OUR,2.62
-dropout,"(512,)",clang,1.0
-dropout,"(512,)",triton,4.725
-dropout,"(512,)",OUR,9.3002
-dropout,"(1024,)",clang,1.0
-dropout,"(1024,)",triton,8.18
-dropout,"(1024,)",OUR,11.7836
-dropout,"(2048,)",clang,1.0
-dropout,"(2048,)",triton,5.953
-dropout,"(2048,)",OUR,8.9412
-correlation,"(1, 1, 32, 32)",clang,1.0
-correlation,"(1, 1, 32, 32)",triton,0.5456
-correlation,"(1, 1, 32, 32)",OUR,1.1282
-correlation,"(4, 4, 32, 32)",clang,1.0
-correlation,"(4, 4, 32, 32)",triton,1.5412
-correlation,"(4, 4, 32, 32)",OUR,1.9956
-correlation,"(4, 4, 64, 64)",clang,1.0
-correlation,"(4, 4, 64, 64)",triton,0.4811
-correlation,"(4, 4, 64, 64)",OUR,1.142
+softmax,"(32, 64)",clang,1.0
+softmax,"(32, 64)",triton,1.2404
+softmax,"(32, 64)",OUR,1.2404
+softmax,"(128, 64)",clang,1.0
+softmax,"(128, 64)",triton,1.0682
+softmax,"(128, 64)",OUR,1.1852
+softmax,"(128, 256)",clang,1.0
+softmax,"(128, 256)",triton,1.5715
+softmax,"(128, 256)",OUR,1.7267
+conv2d,"(1, 1, 32, 32)",clang,1.0
+conv2d,"(1, 1, 32, 32)",triton,1.1282
+conv2d,"(1, 1, 32, 32)",OUR,1.1282
+conv2d,"(4, 4, 32, 32)",clang,1.0
+conv2d,"(4, 4, 32, 32)",triton,1.9956
+conv2d,"(4, 4, 32, 32)",OUR,1.9956
+conv2d,"(4, 4, 64, 64)",clang,1.0
+conv2d,"(4, 4, 64, 64)",triton,1.142
+conv2d,"(4, 4, 64, 64)",OUR,1.142
 layernorm,"(64, 64)",clang,1.0
-layernorm,"(64, 64)",triton,3.675
+layernorm,"(64, 64)",triton,3.8679
 layernorm,"(64, 64)",OUR,3.8679
 layernorm,"(256, 256)",clang,1.0
 layernorm,"(256, 256)",triton,1.3881
@@ -35,15 +35,15 @@ layernorm,"(256, 256)",OUR,1.5152
 layernorm,"(1024, 1024)",clang,1.0
 layernorm,"(1024, 1024)",triton,2.8492
 layernorm,"(1024, 1024)",OUR,4.4599
-resize,"(32, 32, 1)",clang,1.0
-resize,"(32, 32, 1)",triton,1.411
-resize,"(32, 32, 1)",OUR,1.4678
-resize,"(32, 128, 1)",clang,1.0
-resize,"(32, 128, 1)",triton,2.2479
-resize,"(32, 128, 1)",OUR,2.2479
-resize,"(64, 128, 1)",clang,1.0
-resize,"(64, 128, 1)",triton,2.7758
-resize,"(64, 128, 1)",OUR,2.7758
+dropout,"(512,)",clang,1.0
+dropout,"(512,)",triton,4.725
+dropout,"(512,)",OUR,9.3002
+dropout,"(1024,)",clang,1.0
+dropout,"(1024,)",triton,8.1303
+dropout,"(1024,)",OUR,11.7836
+dropout,"(2048,)",clang,1.0
+dropout,"(2048,)",triton,8.9412
+dropout,"(2048,)",OUR,8.9412
 rope,"(64, 4, 4, 256)",clang,1.0
 rope,"(64, 4, 4, 256)",triton,2.3131
 rope,"(64, 4, 4, 256)",OUR,2.3474

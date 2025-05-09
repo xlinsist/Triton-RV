@@ -10,7 +10,7 @@ def plot_all_benchmarks_bar_chart(input_csv, platform):
     df = pd.read_csv(input_csv)
     
     # 筛选我们感兴趣的benchmarks
-    df = df[df["benchmark"].isin(["matmul", "layernorm", "correlation", "dropout", "resize", "rope"])]
+    df = df[df["benchmark"].isin(["matmul", "softmax", "layernorm", "conv2d", "dropout", "resize", "rope"])]
     
     # 创建一个组合列，包含benchmark和shape信息
     df['benchmark_shape'] = df['benchmark'] + df['shape'].astype(str)
@@ -18,7 +18,7 @@ def plot_all_benchmarks_bar_chart(input_csv, platform):
     sns.set_theme(style="whitegrid")
     
     # 创建更大的图形以适应更多数据
-    plt.figure(figsize=(16, 10))
+    plt.figure(figsize=(38, 8))
     ax = sns.barplot(
         data=df, 
         x="benchmark_shape", 
@@ -27,19 +27,50 @@ def plot_all_benchmarks_bar_chart(input_csv, platform):
         palette="Set2"
     )
     
-    ax.set_xlabel("Benchmark and Shape", fontsize=14)
-    ax.set_ylabel("Speedup", fontsize=14)
-    plt.xticks(rotation=45, ha="right", fontsize=10)
-    plt.yticks(fontsize=12)
+    # 设置Y轴范围 - 根据你的数据调整这些值
+    y_max_limit = 6 if platform == "RISC-V" else 10  # 设置你想要的Y轴最大值
+    plt.ylim(0, y_max_limit)
+    
+    # 添加数据标签
+    for p in ax.patches:
+        height = p.get_height()
+        # 如果柱子高度超过限制，显示在柱子内部
+        if height > y_max_limit:
+            if height > 14: # 特判来调整重叠的数
+                ax.text(p.get_x() + p.get_width()/2., y_max_limit*0.8, 
+                    f'{height:.1f}', 
+                    ha='center', va='bottom', color='black', fontsize=22)
+                continue
+            ax.text(p.get_x() + p.get_width()/2., y_max_limit*0.9, 
+                    f'{height:.1f}', 
+                    ha='center', va='bottom', color='black', fontsize=22)
+
+        else:
+            ax.text(p.get_x() + p.get_width()/2., height + 0.05, 
+                    f'{height:.1f}', 
+                    ha='center', va='bottom', fontsize=22)
+    
+    ax.set_xlabel("Benchmark and Shape", fontsize=38)
+    ax.set_ylabel(f"Speedup", fontsize=38)
+    # ax.set_title(f"Performance speedup against Clang and Triton on {platform} platform", fontsize=26)
+
+
+    plt.xticks(rotation=30, ha="right", fontsize=26)
+    plt.yticks(fontsize=22)
     
     # 调整图例位置和大小，将其放在画布内靠右上
-    plt.legend(
-        title='Strategy', 
-        title_fontsize='14', 
-        fontsize='12',
-        loc='upper right',
-        bbox_to_anchor=(0.95, 0.95)
-    )
+
+    if platform == "X86":
+        plt.legend(
+            title='Method', 
+            title_fontsize='32', 
+            fontsize='32',
+            bbox_to_anchor=(0.95, 0.95)
+        )
+        # ax.set_ylabel(f"Speedup (max capped at {y_max_limit})", fontsize=26)
+    else:
+        ax.get_legend().remove()
+        # ax.set_ylabel(f"Speedup", fontsize=26)
     
     # 调整布局防止标签被截断
     plt.tight_layout()
@@ -82,23 +113,22 @@ def get_best_thread(input_csv, output_synergy_csv, output_params_csv):
     triton_df = df[df['method'] == "triton"]
     triton_tuned_df = df[df['method'] == "triton_tuned"]
 
-    shapes_to_keep_first_five = {
-        "matmul": ["(32, 32, 32, 10)", "(64, 64, 64, 10)", "(128, 128, 128, 10)"],
-        "dropout": ["(128, 10)", "(256, 10)", "(512, 10)", "(1024, 10)", "(2048, 10)"],
-        "layernorm": ["(64, 64, 10)", "(128, 128, 10)", "(256, 256, 10)", "(512, 512, 10)", "(1024, 1024, 10)"],
-        "correlation": ["(1, 1, 16, 16, 10)", "(1, 1, 32, 32, 10)", "(4, 4, 32, 32, 10)", "(4, 4, 64, 64, 10)", "(8, 8, 64, 64, 10)"],
-        "softmax": ["(32, 64, 10)", "(32, 256, 10)", "(128, 64, 10)", "(128, 256, 10)", "(32, 1024, 10)", "(128, 1024, 10)", "(512, 1024, 10)"],
-        "resize": ["(32, 32, 1, 100)", "(32, 64, 1, 100)", "(32, 128, 1, 100)", "(64, 64, 1, 100)", "(64, 128, 1, 100)"],
-        "rope": ["(64, 1, 4, 64, 100)", "(64, 1, 4, 256, 100)", "(64, 4, 4, 256, 100)", "(256, 1, 4, 256, 100)", "(256, 4, 4, 256, 100)"],
-    }
+    # shapes_to_keep_first_five = {
+    #     "matmul": ["(32, 32, 32, 10)", "(64, 64, 64, 10)", "(128, 128, 128, 10)"],
+    #     "dropout": ["(128, 10)", "(256, 10)", "(512, 10)", "(1024, 10)", "(2048, 10)"],
+    #     "layernorm": ["(64, 64, 10)", "(128, 128, 10)", "(256, 256, 10)", "(512, 512, 10)", "(1024, 1024, 10)"],
+    #     "correlation": ["(1, 1, 16, 16, 10)", "(1, 1, 32, 32, 10)", "(4, 4, 32, 32, 10)", "(4, 4, 64, 64, 10)", "(8, 8, 64, 64, 10)"],
+    #     "softmax": ["(32, 64, 10)", "(32, 256, 10)", "(128, 64, 10)", "(128, 256, 10)", "(32, 1024, 10)", "(128, 1024, 10)", "(512, 1024, 10)"],
+    #     "resize": ["(32, 32, 1, 100)", "(32, 64, 1, 100)", "(32, 128, 1, 100)", "(64, 64, 1, 100)", "(64, 128, 1, 100)"],
+    #     "rope": ["(64, 1, 4, 64, 100)", "(64, 1, 4, 256, 100)", "(64, 4, 4, 256, 100)", "(256, 1, 4, 256, 100)", "(256, 4, 4, 256, 100)"],
+    # }
     shapes_to_keep_first_three = {
         "matmul": ["(32, 32, 32, 10)", "(64, 64, 64, 10)", "(128, 128, 128, 10)"],
         "dropout": ["(512, 10)", "(1024, 10)", "(2048, 10)"],
         "layernorm": ["(64, 64, 10)", "(256, 256, 10)", "(1024, 1024, 10)"],
-        "correlation": ["(1, 1, 32, 32, 10)", "(4, 4, 32, 32, 10)", "(4, 4, 64, 64, 10)"],
-        "softmax": [],
-        # "softmax": ["(32, 64, 10)", "(128, 64, 10)", "(128, 256, 10)"],
-        "resize": ["(32, 32, 1, 100)", "(32, 128, 1, 100)", "(64, 128, 1, 100)"],
+        "conv2d": ["(1, 1, 32, 32, 10)", "(4, 4, 32, 32, 10)", "(4, 4, 64, 64, 10)"],
+        "softmax": ["(32, 64, 10)", "(128, 64, 10)", "(128, 256, 10)"],
+        # "resize": ["(32, 32, 1, 100)", "(32, 128, 1, 100)", "(64, 128, 1, 100)"],
         "rope": ["(64, 4, 4, 256, 100)", "(256, 1, 4, 256, 100)", "(256, 4, 4, 64, 100)"]
     }
     # shapes_to_keep_full = {
@@ -156,7 +186,7 @@ def get_best_thread(input_csv, output_synergy_csv, output_params_csv):
 
             # Measure t1_best_param under T8
             p2_speedup = 0
-            thread_row = sub_df[(sub_df['thread'] == 8) & (sub_df['parameter'] == t1_best_param)]
+            thread_row = sub_df[(sub_df['thread'] == our_best_thread) & (sub_df['parameter'] == t1_best_param)]
             if not thread_row.empty:
                 p2_speedup = max(p2_speedup, thread_row['speedup'].max())
             for strategy, speedup in [("clang", 1), ("triton", p2_speedup), ("OUR", our_speedup)]:
@@ -174,15 +204,19 @@ def get_best_thread(input_csv, output_synergy_csv, output_params_csv):
                 "T2_best_param": t2_best_param,
                 "T4_best_param": t4_best_param,
                 "T8_best_param": t8_best_param,
-                "T1_best_speedup": t1_best_speedup,
-                "T2_best_speedup": t2_best_speedup,
-                "T4_best_speedup": t4_best_speedup,
-                "T8_best_speedup": t8_best_speedup,
+                # "T1_best_speedup": t1_best_speedup,
+                # "T2_best_speedup": t2_best_speedup,
+                # "T4_best_speedup": t4_best_speedup,
+                # "T8_best_speedup": t8_best_speedup,
                 # "P1_speedup": t4_best_speedup,
                 # "P2_speedup": p2_speedup,
-                "our_best_thread": our_best_thread,
-                "our_best_param": our_best_param,
-                "our_best_speedup": our_speedup
+                # "our_best_thread": our_best_thread,
+                "our_chosen_param": our_best_param,
+                "triton_default_param": t1_best_param,
+                "p2_speedup": p2_speedup,
+                "our_best_speedup": our_speedup,
+                "extra_time_cost_with_triton_default_param": ((our_speedup - p2_speedup) / p2_speedup * 100.00),
+                # "T8_best_speedup": t8_best_speedup,
             })
 
     triton_thread_df = pd.DataFrame(best_thread_rows)
@@ -194,7 +228,7 @@ def get_best_thread(input_csv, output_synergy_csv, output_params_csv):
 if __name__ == "__main__":
 
     get_best_thread('./performance_report_overall_rv.csv', 'performance_report_strategy_rv.csv', 'performance_report_params_rv.csv')
-    plot_all_benchmarks_bar_chart('performance_report_strategy_rv.csv', "rv")
+    plot_all_benchmarks_bar_chart('performance_report_strategy_rv.csv', "RISC-V")
 
     get_best_thread('./performance_report_overall_x86.csv', 'performance_report_strategy_x86.csv', 'performance_report_params_x86.csv')
-    plot_all_benchmarks_bar_chart('performance_report_strategy_x86.csv', "x86")
+    plot_all_benchmarks_bar_chart('performance_report_strategy_x86.csv', "X86")
