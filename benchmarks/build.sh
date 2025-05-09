@@ -169,22 +169,12 @@ build_triton_kernel_lib_and_driver() {
     ${AR} rcs ${LIB_DIR}/libkernel_${TUNNING_ARG}_${block_shape}.a ${OBJ_DIR}/${name}_${TUNNING_ARG}_${block_shape}/${kernel_name}.o
     
     # Compile driver
-    if [ "$1" != "softmax" ]; then
-      # .elf suffix to avoid scp problem(same name dir and kernel)
-      ${COMPILER} ${DRIVER} -I ${DIR}/include -I ${KERNEL_LAUNCHER_INCLUDE_DIR} \
-          -L ${LIB_DIR} -fopenmp -L${CLANG_BUILD_DIR}/lib \
-          -lkernel_${TUNNING_ARG}_${block_shape} -lsupport -latomic \
-          -std=c++17 -D${KERNEL_ENABLE} -fPIC \
-          -o ${KERNEL_BIN_DIR}/${driver_name}_${TUNNING_ARG}_${block_shape}.elf
-    else
-      # Only when benchmark="softmax" do we need to link sleef
-      ${COMPILER} ${DRIVER} -I ${DIR}/include -I ${KERNEL_LAUNCHER_INCLUDE_DIR} \
-          -L ${LIB_DIR} -fopenmp -L${CLANG_BUILD_DIR}/lib \
-          -lkernel_${TUNNING_ARG}_${block_shape} -lsupport -latomic \
-          -std=c++17 -D${KERNEL_ENABLE} -fPIC \
-          -L ${DIR}/triton-cpu/third_party/sleef/build/lib -lsleef \
-          -o ${KERNEL_BIN_DIR}/${driver_name}_${TUNNING_ARG}_${block_shape}.elf
-    fi
+    # .elf suffix to avoid scp problem(same name dir and kernel)
+    ${COMPILER} ${DRIVER} -I ${DIR}/include -I ${KERNEL_LAUNCHER_INCLUDE_DIR} \
+        -L ${LIB_DIR} -fopenmp -L${CLANG_BUILD_DIR}/lib \
+        -lkernel_${TUNNING_ARG}_${block_shape} -lsupport -latomic \
+        -std=c++17 -D${KERNEL_ENABLE} -fPIC \
+        -o ${KERNEL_BIN_DIR}/${driver_name}_${TUNNING_ARG}_${block_shape}.elf
 
     ${OBJDUMP} -d ${KERNEL_BIN_DIR}/${driver_name}_${TUNNING_ARG}_${block_shape}.elf &> ${KERNEL_BIN_DIR}/${driver_name}_${TUNNING_ARG}_${block_shape}.elf.s
 
@@ -333,9 +323,8 @@ esac
 # Main function to build driver. Make your changes here if you need
 ################################################################################
 
-# BENCHMARKS=("layernorm" "correlation" "dropout" "resize" "softmax")
-# BENCHMARKS=("correlation")
-BENCHMARKS=("rope")
+# BENCHMARKS=("matmul" "softmax" "correlation" "layernorm"  "dropout" "rope" "resize")
+BENCHMARKS=("softmax")
 
 for BENCHMARK in "${BENCHMARKS[@]}"; do
   # Array of "c_kernel triton_kernel driver_path tuning_arg" entries

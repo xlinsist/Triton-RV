@@ -5,15 +5,14 @@ MODE="Benchmark"
 
 DIR=`dirname $0`
 
-# BENCHMARKS=("matmul" "layernorm" "correlation" "dropout" "softmax" "resize" "rope" "warp")
-BENCHMARKS=("rope")
+BENCHMARKS=("matmul" "softmax" "correlation" "layernorm"  "dropout" "rope" "resize")
 
 for BENCHMARK in "${BENCHMARKS[@]}"; do
 
   BUILD_DIR="${DIR}/build-${BENCHMARK}"
   BIN_DIR=${BUILD_DIR}/bin/
 
-  THREAD=(1 2 4 8)
+  THREAD=(1 4 8)
 
   # COMPILER=(triton gcc clang)
   COMPILER=(clang triton)

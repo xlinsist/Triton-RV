@@ -36,7 +36,7 @@ def parse_performance_data(file_path, benchmark):
             elif benchmark == "resize":
                 match = re.match(r'(gcc|clang|triton)_(T\d+)(?:_resize_kernel_(\d+))?', method_info)
             elif benchmark == "softmax":
-                match = re.match(r'(gcc|clang|triton)_(T\d+)(?:_softmax_kernel_(\d+_\d+))?', method_info)
+                match = re.match(r'(gcc|clang|triton)_(T\d+)(?:_kernel_softmax_kernel_(\d+_\d+))?', method_info)
             elif benchmark == "dropout":
                 match = re.match(r'(gcc|clang|triton)_(T\d+)(?:_dropout_kernel_(\d+_\d+))?', method_info)
             elif benchmark == "correlation":
@@ -97,12 +97,12 @@ def find_best_triton_params(df):
 
 # 使用示例
 if __name__ == "__main__":
-    benchmarks = ["matmul", "dropout", "correlation", "layernorm", "resize", "rope"]
-    # benchmarks = ["rope"]
+    benchmarks = ["matmul", "softmax", "correlation", "layernorm", "dropout", "rope", "resize"]
+
     overall_df = pd.DataFrame()
     for benchmark in benchmarks:
-        # input_file = f"./build-{benchmark}/report.xls"  # 替换为你的文件路径
-        input_file = f"./build-rv-0423/build-{benchmark}/report.xls"  # 替换为你的文件路径
+        # input_file = f"./build-{benchmark}/report.xls"
+        input_file = f"./build-rv/build-{benchmark}/report.xls"
 
         if not os.path.exists(input_file):
             print(f"Warning: {input_file} not found. Skipping {benchmark}...")

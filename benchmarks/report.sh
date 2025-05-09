@@ -4,10 +4,9 @@
 MODE="Benchmark"
 
 # DIR=`dirname $0`
-DIR=`dirname $0`/build-rv-0423
+DIR=`dirname $0`/build-rv
 
-# BENCHMARKS=("matmul" "layernorm" "correlation" "dropout" "resize" "rope")
-BENCHMARKS=("correlation")
+BENCHMARKS=("matmul" "softmax" "correlation" "layernorm"  "dropout" "rope" "resize")
 
 for BENCHMARK in "${BENCHMARKS[@]}"; do
   BUILD_DIR="${DIR}/build-${BENCHMARK}"
@@ -25,7 +24,7 @@ for BENCHMARK in "${BENCHMARKS[@]}"; do
   # STAT_KEYWORD=(C Triton)
 
   COMPILER=(clang triton)
-  THREADS=(1 2 4 8)
+  THREADS=(1 4 8)
 
   TRITON_KERNELS=`ls ${BIN_DIR}/triton/`
   # TRITON_KERNELS=layernorm

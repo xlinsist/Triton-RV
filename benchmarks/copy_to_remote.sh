@@ -1,9 +1,10 @@
 #!/bin/bash
 
 DIR="$(dirname "$0")"
-REMOTE_BASE="/home/user/triton-benchmark/build-rv-0423"
-# BENCHMARKS=("layernorm" "correlation" "resize")
-BENCHMARKS=("rope")
+REMOTE_BASE="/home/user/triton-benchmark/build-rv"
+# BENCHMARKS=("matmul" "softmax" "correlation" "layernorm"  "dropout" "rope" "resize")
+BENCHMARKS=("softmax")
+
 SUBDIRS=("triton" "clang")
 
 for BENCHMARK in "${BENCHMARKS[@]}"; do
