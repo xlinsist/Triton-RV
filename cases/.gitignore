@@ -1,9 +1,0 @@
-.pkl_memoize_py3
-.hidet
-__pycache__
-*.csv
-*.json
-*.png
-
-*autotvm.log
-ansor*.json
