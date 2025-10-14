@@ -130,3 +130,48 @@ $ ./copy_remote_back.sh # Modify REMOTE IP and file paths accordingly.
 $ ./report.sh
 ```
 Check the `performance_report_overall.csv` generated under `benchmarks` directory.
+
+## Output Examples
+
+The generated `performance_report_overall.csv` after running `report.sh` as demonstrated above should look like this:
+```
+benchmark,shape,method,thread,parameter,time(s),speedup
+...
+matmul,"(32, 32, 32, 10)",clang,1,,0.0247168,1.0
+matmul,"(32, 32, 32, 10)",clang,4,,0.0150131,1.6463
+matmul,"(32, 32, 32, 10)",clang,8,,0.0303547,0.8143
+matmul,"(32, 32, 32, 10)",clang,16,,0.0151946,1.6267
+matmul,"(32, 32, 32, 10)",clang,32,,0.0207143,1.1932
+matmul,"(32, 32, 32, 10)",clang,64,,0.047209,0.5236
+matmul,"(32, 32, 32, 10)",triton_tuned,1,"(32, 32, 8)",0.00235865,10.4792
+matmul,"(32, 32, 32, 10)",triton_tuned,4,"(32, 32, 8)",0.00205009,12.0564
+matmul,"(32, 32, 32, 10)",triton_tuned,8,"(32, 32, 4)",0.00259357,9.53
+matmul,"(32, 32, 32, 10)",triton_tuned,16,"(32, 32, 16)",0.0021222,11.6468
+matmul,"(32, 32, 32, 10)",triton_tuned,32,"(32, 32, 16)",0.00173468,14.2486
+matmul,"(32, 32, 32, 10)",triton_tuned,64,"(32, 32, 16)",0.00184007,13.4325
+matmul,"(64, 64, 64, 10)",clang,1,,0.0178245,1.0
+matmul,"(64, 64, 64, 10)",clang,4,,0.0146382,1.2177
+matmul,"(64, 64, 64, 10)",clang,8,,0.0135641,1.3141
+matmul,"(64, 64, 64, 10)",clang,16,,0.0143403,1.243
+matmul,"(64, 64, 64, 10)",clang,32,,0.0202123,0.8819
+matmul,"(64, 64, 64, 10)",clang,64,,0.0276551,0.6445
+matmul,"(64, 64, 64, 10)",triton_tuned,1,"(32, 32, 32)",0.0125893,1.4158
+matmul,"(64, 64, 64, 10)",triton_tuned,4,"(4, 32, 4)",0.0124491,1.4318
+matmul,"(64, 64, 64, 10)",triton_tuned,8,"(8, 4, 8)",0.0132844,1.3418
+matmul,"(64, 64, 64, 10)",triton_tuned,16,"(8, 32, 8)",0.013894,1.2829
+matmul,"(64, 64, 64, 10)",triton_tuned,32,"(8, 32, 32)",0.016862,1.0571
+matmul,"(64, 64, 64, 10)",triton_tuned,64,"(16, 4, 4)",0.016894,1.0551
+matmul,"(128, 128, 128, 10)",clang,1,,0.0401563,1.0
+matmul,"(128, 128, 128, 10)",clang,4,,0.0398675,1.0072
+matmul,"(128, 128, 128, 10)",clang,8,,0.0158121,2.5396
+matmul,"(128, 128, 128, 10)",clang,16,,0.0194217,2.0676
+matmul,"(128, 128, 128, 10)",clang,32,,0.0238589,1.6831
+matmul,"(128, 128, 128, 10)",clang,64,,0.0553912,0.725
+matmul,"(128, 128, 128, 10)",triton_tuned,1,"(32, 16, 4)",0.0164989,2.4339
+matmul,"(128, 128, 128, 10)",triton_tuned,4,"(32, 8, 32)",0.0129716,3.0957
+matmul,"(128, 128, 128, 10)",triton_tuned,8,"(16, 32, 8)",0.0136829,2.9348
+matmul,"(128, 128, 128, 10)",triton_tuned,16,"(8, 8, 4)",0.01424,2.82
+matmul,"(128, 128, 128, 10)",triton_tuned,32,"(32, 8, 32)",0.0152967,2.6252
+matmul,"(128, 128, 128, 10)",triton_tuned,64,"(16, 4, 32)",0.0167945,2.391
+...
+```
