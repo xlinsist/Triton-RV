@@ -1,11 +1,14 @@
 #!/bin/bash
-
 DIR="$(dirname "$0")"
-REMOTE_URL="user@192.168.15.167" # 根据远程平台做修改
+# REMOTE_URL="user@192.168.15.167" # 根据远程平台做修改
+REMOTE_URL="user@192.168.15.175" # 根据远程平台做修改
 REMOTE_BASE="/home/user/triton-benchmark/build-rv" # 根据远程平台做修改
 
-# BENCHMARKS=("matmul" "softmax" "correlation" "layernorm"  "dropout" "rope" "resize")
-BENCHMARKS=("softmax")
+echo "Copying openmp-sysroot-riscv to ${REMOTE_BASE}"
+scp -r "${DIR}/openmp-sysroot-riscv" "${REMOTE_URL}:${REMOTE_BASE}/"
+
+BENCHMARKS=("matmul" "softmax" "correlation" "layernorm"  "dropout" "rope" "resize")
+# BENCHMARKS=("softmax")
 
 SUBDIRS=("triton" "clang")
 
@@ -33,3 +36,6 @@ done
 
 echo "Copying run.sh to ${REMOTE_BASE}"
 scp "${DIR}/run.sh" "${REMOTE_URL}:${REMOTE_BASE}/"
+
+echo "Copying report.sh to ${REMOTE_BASE}"
+scp "${DIR}/report.sh" "${REMOTE_URL}:${REMOTE_BASE}/"

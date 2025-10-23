@@ -121,14 +121,15 @@ $ <Use SSH to connect to the REMOTE IP>
 
 // On the remote RISC-V machine:
 # <Navigate to the correct directory>
-# export LD_LIBRARY_PATH=<path-to-libomp.so>:$LD_LIBRARY_PATH
 # ./run.sh
-# exit # Exit the remote session
+# ./report.sh
+# exit // Exit the remote session
 
 // Back on the local machine:
 $ ./copy_remote_back.sh # Modify REMOTE IP and file paths accordingly.
-$ ./report.sh
+$ python get_data.py
 ```
+
 Check the `performance_report_overall.csv` generated under `benchmarks` directory.
 
 ## Output Examples
@@ -175,3 +176,4 @@ matmul,"(128, 128, 128, 10)",triton_tuned,32,"(32, 8, 32)",0.0152967,2.6252
 matmul,"(128, 128, 128, 10)",triton_tuned,64,"(16, 4, 32)",0.0167945,2.391
 ...
 ```
+.

@@ -249,7 +249,6 @@ build_driver() {
 
   build_support_lib
 
-  # MODE="Accuracy"
   MODE="Benchmark"
   # Benchmark mode doesn't check accuracy since IO operation is slow
   if [ "${MODE}" == "Accuracy" ]; then
@@ -323,8 +322,8 @@ esac
 # Main function to build driver. Make your changes here if you need
 ################################################################################
 
-# BENCHMARKS=("matmul" "softmax" "correlation" "layernorm"  "dropout" "rope" "resize")
-BENCHMARKS=("softmax")
+BENCHMARKS=("matmul" "correlation" "layernorm"  "dropout" "rope" "resize")
+# BENCHMARKS=("softmax")
 
 for BENCHMARK in "${BENCHMARKS[@]}"; do
   # Array of "c_kernel triton_kernel driver_path tuning_arg" entries

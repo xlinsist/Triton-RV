@@ -97,12 +97,10 @@ def find_best_triton_params(df):
 
 # 使用示例
 if __name__ == "__main__":
-    # benchmarks = ["matmul", "softmax", "correlation", "layernorm", "dropout", "rope", "resize"]
-    benchmarks = ["softmax"]
+    benchmarks = ["matmul", "softmax", "correlation", "layernorm", "dropout", "rope", "resize"]
 
     overall_df = pd.DataFrame()
     for benchmark in benchmarks:
-        # input_file = f"./build-rv/build-{benchmark}/report.xls"
         input_file = f"./build-{benchmark}/report.xls"
 
         if not os.path.exists(input_file):

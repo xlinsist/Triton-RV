@@ -1,13 +1,10 @@
 #!/bin/bash
 
-# MODE="Accuracy"
 MODE="Benchmark"
-
-# DIR=`dirname $0`/build-rv
 DIR=`dirname $0`
 
-# BENCHMARKS=("matmul" "softmax" "correlation" "layernorm"  "dropout" "rope" "resize")
-BENCHMARKS=("softmax")
+BENCHMARKS=("matmul" "softmax" "correlation" "layernorm"  "dropout" "rope" "resize")
+# BENCHMARKS=("softmax")
 
 for BENCHMARK in "${BENCHMARKS[@]}"; do
   BUILD_DIR="${DIR}/build-${BENCHMARK}"
@@ -106,4 +103,4 @@ for BENCHMARK in "${BENCHMARKS[@]}"; do
   echo "" >> ${REPORT_FILE}
 done
 
-python ./get_data.py
+# python ./get_data.py
