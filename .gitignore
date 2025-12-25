@@ -20,3 +20,5 @@ test_openmp*
 
 build
 *.bak
+
+*.png

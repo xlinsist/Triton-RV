@@ -152,7 +152,6 @@ build_triton_kernel_lib_and_driver() {
     # build triton kernel: .llir --> .o
     for kernel_ir in ${tunning_dir}/*.llir; do
       kernel_name=`basename ${kernel_ir} .llir`
-
       ${AS} -o ${KERNEL_AUX_FILE_DIR}_${block_shape}/${kernel_name}.bc ${kernel_ir}
       ${COMPILER} -c ${KERNEL_AUX_FILE_DIR}_${block_shape}/${kernel_name}.bc -o ${OBJ_DIR}/${name}_${TUNNING_ARG}_${block_shape}/${kernel_name}.o
       ${OBJDUMP} -d ${OBJ_DIR}/${name}_${TUNNING_ARG}_${block_shape}/${kernel_name}.o &> ${OBJ_DIR}/${name}_${TUNNING_ARG}_${block_shape}/${kernel_name}.s
@@ -303,7 +302,7 @@ case $PLATFORM in
       ;;
     rv)
       CLANGPP="${CLANG_BUILD_DIR}/bin/clang++ --target=riscv64-unknown-linux-gnu \
-              --sysroot="${RISCV_GNU_TOOLCHAIN_DIR}/sysroot" \
+              --sysroot="${RISCV_GNU_TOOLCHAIN_DIR}/sysroot" -march=rv64gcv \
               --gcc-toolchain="${RISCV_GNU_TOOLCHAIN_DIR}" \
               -fvectorize -fslp-vectorize -O3 -std=c++17"
       GCC="${RISCV_GNU_TOOLCHAIN_DIR}/bin/riscv64-unknown-linux-gnu-g++ \
@@ -322,8 +321,7 @@ esac
 # Main function to build driver. Make your changes here if you need
 ################################################################################
 
-BENCHMARKS=("matmul" "correlation" "layernorm"  "dropout" "rope" "resize")
-# BENCHMARKS=("softmax")
+BENCHMARKS=("matmul" "softmax" "correlation" "layernorm"  "dropout" "rope" "resize")
 
 for BENCHMARK in "${BENCHMARKS[@]}"; do
   # Array of "c_kernel triton_kernel driver_path tuning_arg" entries

@@ -3,8 +3,12 @@
 MODE="Benchmark"
 DIR=`dirname $0`
 
-BENCHMARKS=("matmul" "softmax" "correlation" "layernorm"  "dropout" "rope" "resize")
-# BENCHMARKS=("softmax")
+# 将数组改为字符串
+BENCHMARKS_STR="matmul softmax correlation layernorm dropout rope resize"
+# BENCHMARKS_STR="softmax"
+
+# 将字符串转换为数组进行循环
+BENCHMARKS=($BENCHMARKS_STR)
 
 for BENCHMARK in "${BENCHMARKS[@]}"; do
   BUILD_DIR="${DIR}/build-${BENCHMARK}"
@@ -19,10 +23,15 @@ for BENCHMARK in "${BENCHMARKS[@]}"; do
   echo "Report performace to ${REPORT_FILE}..."
 
   # Keyword to extract the kernel running time
-  # STAT_KEYWORD=(C Triton)
+  # STAT_KEYWORD_STR="C Triton"
 
-  COMPILER=(clang triton)
-  THREADS=(1 4 8)
+  # 将数组改为字符串
+  COMPILER_STR="clang triton"
+  THREADS_STR="1 4 8"
+
+  # 将字符串转换为数组
+  COMPILER=($COMPILER_STR)
+  THREADS=($THREADS_STR)
 
   TRITON_KERNELS=`ls ${BIN_DIR}/triton/`
   # TRITON_KERNELS=layernorm
@@ -103,4 +112,4 @@ for BENCHMARK in "${BENCHMARKS[@]}"; do
   echo "" >> ${REPORT_FILE}
 done
 
-# python ./get_data.py
+echo "All reports generated in benchmarks' directories."

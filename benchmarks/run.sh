@@ -2,20 +2,29 @@
 
 MODE="Benchmark"
 DIR=`dirname $0`
-LD_LIBRARY_PATH="${DIR}/openmp-sysroot-riscv/lib:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="${DIR}/openmp-sysroot-riscv/lib:$LD_LIBRARY_PATH"
 
-BENCHMARKS=("matmul" "softmax" "correlation" "layernorm"  "dropout" "rope" "resize")
-# BENCHMARKS=("softmax")
+# 将数组改为字符串
+BENCHMARKS_STR="matmul softmax correlation layernorm dropout rope resize"
+# BENCHMARKS_STR="softmax"
+
+# 将字符串转换为数组进行循环
+BENCHMARKS=($BENCHMARKS_STR)
 
 for BENCHMARK in "${BENCHMARKS[@]}"; do
 
   BUILD_DIR="${DIR}/build-${BENCHMARK}"
   BIN_DIR=${BUILD_DIR}/bin/
 
-  THREAD=(1 4 8)
+  # 将数组改为字符串
+  THREAD_STR="1 4 8"
 
-  # COMPILER=(triton gcc clang)
-  COMPILER=(clang triton)
+  # COMPILER_STR="triton gcc clang"
+  COMPILER_STR="clang triton"
+
+  # 将字符串转换为数组
+  THREAD=($THREAD_STR)
+  COMPILER=($COMPILER_STR)
 
   for compiler in ${COMPILER[@]}; do
     for f_sub in `ls ${BIN_DIR}/${compiler}`; do
@@ -48,3 +57,5 @@ for BENCHMARK in "${BENCHMARKS[@]}"; do
     done
   done
 done
+
+echo "Run all benchmarks completed."
