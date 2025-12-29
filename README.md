@@ -64,12 +64,18 @@ $ LLVM_INCLUDE_DIRS=$LLVM_BUILD_DIR/include \
 ```
 > WARNING: Currently the patches applied to triton-cpu may have correctness issues that need to be fixed. We are working on it.
 
+### **5. Modify global configuration**
+
+modify `global_config.sh` before running. For instance, change the following variables:
+```sh
+$ export CLANG_BUILD_DIR="${DIR_PATH}/llvm-project/build" # Since Clang is built along with LLVM, this path can be used directly.
+$ export GCC_X86_BUILD_DIR="/usr" # By default, the system-installed GCC is used; modify as needed.
+```
+
 ## Running on x86
 
 ```sh
 $ cd benchmarks
-$ export CLANG_BUILD_DIR=./llvm-project/build # Since Clang is built along with LLVM, this path can be used directly.
-$ export GCC_X86_BUILD_DIR=/usr # By default, the system-installed GCC is used; modify as needed.
 $ ./build.sh  # Customize sections marked with "Make your changes here if you need," including method, benchmark, and toolchain paths.
 $ ./run.sh
 $ ./report.sh
@@ -108,14 +114,16 @@ $ cmake -G Ninja ../llvm \
 $ ninja check-mlir check-clang
 $ export CLANG_BUILD_DIR=<path-to-this-llvm-project>/build # For examples, export CLANG_BUILD_DIR=./llvm-project/build-86b69c-rv
 ```
+### **3. Modify global configuration**
+modify `global_config.sh`, set the environment variables above before running.
 
-### **3. Running on a RISC-V Platform**
+### **4. Running on a RISC-V Platform**
 
 First, use `build.sh` to cross-compile and generate ELF files locally. Then, transfer them to a remote RISC-V machine for execution using `run.sh`. Finally, copy the output directory back to the local machine and run `report.sh` to generate performance results.
 
 ```sh
 $ cd benchmarks
-$ ./build.sh --platform rv
+$ ./build.sh # modify `global_config.sh` before running
 $ ./copy_to_remote.sh # Modify REMOTE IP and file paths accordingly.
 $ <Use SSH to connect to the REMOTE IP>
 

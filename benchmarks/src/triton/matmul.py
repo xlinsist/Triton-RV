@@ -10,18 +10,22 @@ USE_GPU = False
 
 def get_matmul_kernel_autotune_config():
     configs=[]
-    for BLOCK_SIZE_M in [4, 8, 16, 32]:
-        for BLOCK_SIZE_N in [4, 8, 16, 32]:
-            for BLOCK_SIZE_K in [4, 8, 16, 32]:
-                configs.append(triton.Config({'BLOCK_SIZE_M': BLOCK_SIZE_M, 'BLOCK_SIZE_N': BLOCK_SIZE_N, 'BLOCK_SIZE_K': BLOCK_SIZE_K}))
+    # 标准测试
+    # for BLOCK_SIZE_M in [4, 8, 16, 32]:
+    #     for BLOCK_SIZE_N in [4, 8, 16, 32]:
+    #         for BLOCK_SIZE_K in [4, 8, 16, 32]:
+    #             configs.append(triton.Config({'BLOCK_SIZE_M': BLOCK_SIZE_M, 'BLOCK_SIZE_N': BLOCK_SIZE_N, 'BLOCK_SIZE_K': BLOCK_SIZE_K}))
+    # 全量测试
     # for BLOCK_SIZE_M in [4, 8, 16, 32, 64, 128]:
     #     for BLOCK_SIZE_N in [4, 8, 16, 32, 64, 128]:
     #         for BLOCK_SIZE_K in [4, 8, 16, 32, 64, 128]:
     #             configs.append(triton.Config({'BLOCK_SIZE_M': BLOCK_SIZE_M, 'BLOCK_SIZE_N': BLOCK_SIZE_N, 'BLOCK_SIZE_K': BLOCK_SIZE_K}))
-    # for BLOCK_SIZE_M in [4, 8, 16, 32, 64]:
-    #     BLOCK_SIZE_N = BLOCK_SIZE_M
-    #     for BLOCK_SIZE_K in [8, 16, 32, 64, 128]:
-    #         configs.append(triton.Config({'BLOCK_SIZE_M': BLOCK_SIZE_M, 'BLOCK_SIZE_N': BLOCK_SIZE_N, 'BLOCK_SIZE_K': BLOCK_SIZE_K}))
+    # 小批量测试
+    # 修改benchmarks/triton-cpu/python/triton/language/semantic.py中关于“Input shapes should have M >=”的限制。
+    for BLOCK_SIZE_M in [2]:
+        BLOCK_SIZE_N = 4
+        for BLOCK_SIZE_K in [4, 8, 16]:
+            configs.append(triton.Config({'BLOCK_SIZE_M': BLOCK_SIZE_M, 'BLOCK_SIZE_N': BLOCK_SIZE_N, 'BLOCK_SIZE_K': BLOCK_SIZE_K}))
 
     if(os.getenv("ENABLE_AUTOTUNING") == "matmul_kernel"):
       assert (len(configs) > 1), "Autotuning config size need be larger than 1"

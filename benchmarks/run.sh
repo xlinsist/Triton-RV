@@ -1,59 +1,60 @@
 #!/bin/bash
 
-MODE="Benchmark"
-DIR=`dirname $0`
+# 获取当前脚本的目录
+DIR=$(dirname $(readlink -f "$0"))
+
+# 加载全局配置
+if [ ! -f "${DIR}/global_config.sh" ]; then    
+  echo "Error: global_config.sh not found!"    
+  exit 1
+fi
+source "${DIR}/global_config.sh"
+
 export LD_LIBRARY_PATH="${DIR}/openmp-sysroot-riscv/lib:$LD_LIBRARY_PATH"
 
-# 将数组改为字符串
-BENCHMARKS_STR="matmul softmax correlation layernorm dropout rope resize"
-# BENCHMARKS_STR="softmax"
+# 将基准测试列表转换为数组
+IFS=' ' read -r -a BENCHMARKS <<< "$BENCHMARKS_LIST"
+# 根据全局配置加载线程配置
+IFS=' ' read -r -a THREADS <<< "$THREADS_LIST"
+# 根据启用的编译器设置 COMPILERS 数组
+COMPILERS=()
+if [ "$ENABLE_GCC" -eq 1 ]; then
+  COMPILERS+=("gcc")
+fi
+if [ "$ENABLE_CLANG" -eq 1 ]; then
+  COMPILERS+=("clang")
+fi
+if [ "$ENABLE_TRITON" -eq 1 ]; then
+  COMPILERS+=("triton")
+fi
 
-# 将字符串转换为数组进行循环
-BENCHMARKS=($BENCHMARKS_STR)
-
+# 遍历每个基准测试
 for BENCHMARK in "${BENCHMARKS[@]}"; do
-
   BUILD_DIR="${DIR}/build-${BENCHMARK}"
-  BIN_DIR=${BUILD_DIR}/bin/
+  BIN_DIR="${BUILD_DIR}/bin"
 
-  # 将数组改为字符串
-  THREAD_STR="1 4 8"
-
-  # COMPILER_STR="triton gcc clang"
-  COMPILER_STR="clang triton"
-
-  # 将字符串转换为数组
-  THREAD=($THREAD_STR)
-  COMPILER=($COMPILER_STR)
-
-  for compiler in ${COMPILER[@]}; do
-    for f_sub in `ls ${BIN_DIR}/${compiler}`; do
-      ### FIXME: Check whether is a kernel directory
-      kernel_dir=${BIN_DIR}/${compiler}/${f_sub}
-      echo "${kernel_dir}"
-      if [ ! -d "${kernel_dir}" ];then
-          continue
+  for COMPILER in "${COMPILERS[@]}"; do
+    for f_sub in "${BIN_DIR}/${COMPILER}/"*/; do
+      if [ ! -d "${f_sub}" ]; then
+        continue
       fi
 
-      kernel_name=`basename ${f_sub}`
-      echo ${kernel_name}
+      kernel_name=$(basename "$f_sub")
+      echo "Processing kernel: ${kernel_name}"
 
-      # shape array
-      # NOTE: get from config
-      source ${kernel_dir}/${kernel_name}.cfg
+      # 加载形状配置
+      source "${f_sub}/${kernel_name}.cfg"
 
-      for thread in ${THREAD[@]}; do
-        for shape in ${SHAPE[@]}; do
-          for kernel in `ls -v ${kernel_dir}/${kernel_name}*.elf`; do
-            echo ${kernel}
-            tmp=`basename ${kernel} .elf`
-            block_shape=${tmp#*_}
-            DB_FILE=${BUILD_DIR}/${kernel_name} TRITON_CPU_MAX_THREADS=${thread} bash -c "${kernel} ${shape}" 2> "${kernel_dir}/${tmp}_T${thread}_S${shape}.log"
+      for THREAD in "${THREADS[@]}"; do
+        for shape in "${SHAPE[@]}"; do
+          for kernel in "${f_sub}/${kernel_name}"*.elf; do
+            echo "Running kernel: ${kernel}"
+            log_file="${f_sub}/$(basename "${kernel}" .elf)_T${THREAD}_S${shape}.log"
 
+            DB_FILE="${BUILD_DIR}/${kernel_name}" TRITON_CPU_MAX_THREADS=${THREAD} bash -c "${kernel} ${shape}" 2> "${log_file}"
           done
         done
       done
-
     done
   done
 done

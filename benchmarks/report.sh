@@ -1,15 +1,32 @@
 #!/bin/bash
 
-MODE="Benchmark"
-DIR=`dirname $0`
+# 获取当前脚本的目录
+DIR=$(dirname $(readlink -f "$0"))
 
-# 将数组改为字符串
-BENCHMARKS_STR="matmul softmax correlation layernorm dropout rope resize"
-# BENCHMARKS_STR="softmax"
+# 加载全局配置
+if [ ! -f "${DIR}/global_config.sh" ]; then    
+  echo "Error: global_config.sh not found!"    
+  exit 1
+fi
+source "${DIR}/global_config.sh"
 
-# 将字符串转换为数组进行循环
-BENCHMARKS=($BENCHMARKS_STR)
+# 将基准测试列表转换为数组
+IFS=' ' read -r -a BENCHMARKS <<< "$BENCHMARKS_LIST"
+# 根据全局配置加载线程配置
+IFS=' ' read -r -a THREADS <<< "$THREADS_LIST"
+# 根据启用的编译器设置 COMPILERS 数组
+COMPILERS=()
+if [ "$ENABLE_GCC" -eq 1 ]; then
+  COMPILERS+=("gcc")
+fi
+if [ "$ENABLE_CLANG" -eq 1 ]; then
+  COMPILERS+=("clang")
+fi
+if [ "$ENABLE_TRITON" -eq 1 ]; then
+  COMPILERS+=("triton")
+fi
 
+# 遍历每个基准测试
 for BENCHMARK in "${BENCHMARKS[@]}"; do
   BUILD_DIR="${DIR}/build-${BENCHMARK}"
   BIN_DIR="${BUILD_DIR}/bin"
@@ -20,96 +37,50 @@ for BENCHMARK in "${BENCHMARKS[@]}"; do
     continue
   fi
 
-  echo "Report performace to ${REPORT_FILE}..."
+  echo "Generating report: ${REPORT_FILE}..."
+  echo -n "" > "${REPORT_FILE}"
 
-  # Keyword to extract the kernel running time
-  # STAT_KEYWORD_STR="C Triton"
+  for kernel_name in "${BIN_DIR}/triton/"*/; do
+    kernel_name=$(basename "$kernel_name")
+    source "${BIN_DIR}/triton/${kernel_name}/${kernel_name}.cfg"
 
-  # 将数组改为字符串
-  COMPILER_STR="clang triton"
-  THREADS_STR="1 4 8"
+    echo -e "##### ${kernel_name} kernel performance #####" >> "${REPORT_FILE}"
+    echo -ne "shape (${SHAPE_DESC})" >> "${REPORT_FILE}"
 
-  # 将字符串转换为数组
-  COMPILER=($COMPILER_STR)
-  THREADS=($THREADS_STR)
-
-  TRITON_KERNELS=`ls ${BIN_DIR}/triton/`
-  # TRITON_KERNELS=layernorm
-
-  echo -n "" > ${REPORT_FILE}
-  # Kernel performance on different shape
-  for kernel_name in ${TRITON_KERNELS}; do
-    echo "${kernel_name}"
-    # header
-    # shape array
-    # NOTE: get from config
-    source ${BIN_DIR}/triton/${kernel_name}/${kernel_name}.cfg
-    echo ${SHAPE[*]}
-    echo -e "##### ${kernel_name} kernel performance #####" >> ${REPORT_FILE}
-
-    echo -ne "shape (${SHAPE_DESC})" >> ${REPORT_FILE}
-    for thread in ${THREADS[@]}; do
-      for compiler in ${COMPILER[@]}; do
-        for kernel in `ls -v ${BIN_DIR}/${compiler}/${kernel_name}/${kernel_name}*.elf`; do
-          tmp=`basename ${kernel} .elf`
-          block_shape=${tmp#${kernel_name}*}
-          echo -ne "\t${compiler}_T${thread}${block_shape}" >> ${REPORT_FILE}
+    # 填写报告的头部
+    for THREAD in "${THREADS[@]}"; do
+      for COMPILER in "${COMPILERS[@]}"; do
+        for kernel in "${BIN_DIR}/${COMPILER}/${kernel_name}/${kernel_name}"*.elf; do
+          echo -ne "\t${COMPILER}_T${THREAD}$(basename "$kernel" .elf | sed "s/^${kernel_name}//")" >> "${REPORT_FILE}"
         done
       done
     done
-    echo "" >> ${REPORT_FILE}
+    echo "" >> "${REPORT_FILE}"
 
-    # average_percentage=0.0
-    for shape in ${SHAPE[@]}; do
-      echo -ne "${shape}" >> ${REPORT_FILE}
+    # 填写每种形状的性能数据
+    for shape in "${SHAPE[@]}"; do
+      echo -ne "${shape}" >> "${REPORT_FILE}"
 
-      for thread in ${THREADS[@]}; do
-        for compiler in ${COMPILER[@]}; do
-          ### FIXME: Check whether is a kernel directory
-          kernel_dir=${BIN_DIR}/${compiler}/${kernel_name}
-          if [ ! -d "${kernel_dir}" ];then
-              continue
+      for THREAD in "${THREADS[@]}"; do
+        for COMPILER in "${COMPILERS[@]}"; do
+          kernel_dir="${BIN_DIR}/${COMPILER}/${kernel_name}"
+          if [ ! -d "${kernel_dir}" ]; then
+            continue
           fi
 
-          #=================================================#
-          # NOTE: depend on the format of perf.log
-          # extract the statistics
-
-          # percentage=1.0
-          for kernel in `ls -v ${kernel_dir}/${kernel_name}*.elf`; do
-            tmp=`basename ${kernel} .elf`
-
-            second=$(cat ${kernel_dir}/${tmp}_T${thread}_S${shape}.log | sed -n "s/^.* Kernel Time: \([0-9]\+\(\.[0-9]\+\)*\).*/\1/p")
-            # percentage=$(echo "scale=2; ${second} / ${percentage}" | bc)
-
-            echo "read from ${kernel_dir}/${tmp}_T${thread}_S${shape}.log, get time ${second} s."
-            echo -ne "\t${second}" >> ${REPORT_FILE}
+          for kernel in "${kernel_dir}/${kernel_name}"*.elf; do
+            log_file="${kernel_dir}/$(basename "${kernel}" .elf)_T${THREAD}_S${shape}.log"
+            second=$(sed -n "s/^.* Kernel Time: \([0-9]\+\(\.[0-9]\+\)*\).*/\1/p" "${log_file}")
+            echo -ne "\t${second}" >> "${REPORT_FILE}"
           done
         done
-        #=================================================#
-
-        # calculate the performance gap percentage
-        # echo -ne "\t${percentage}" >> ${REPORT_FILE}
-
-        # Accumulate performance gap percentage
-        # average_percentage=$(echo "${average_percentage} + ${percentage}" | bc)
       done
-      echo "" >> ${REPORT_FILE}
-
+      echo "" >> "${REPORT_FILE}"
     done
-    echo "" >> ${REPORT_FILE}
-    # Average performance gap percentage
-    # average_percentage=$(echo "scale=2; ${average_percentage}/${#SHAPE[@]} " | bc)
-
-    # tabs=$(printf '\t%.0s' $(seq 1 ${#STAT_KEYWORD[@]}))
-    # echo -e "average percentage\t${tabs}${average_percentage}" >> ${REPORT_FILE}
-
-    echo "" >> ${REPORT_FILE}
-    echo "" >> ${REPORT_FILE}
+    echo "" >> "${REPORT_FILE}"
   done
 
-  echo "" >> ${REPORT_FILE}
-  echo "" >> ${REPORT_FILE}
+  echo "Report for ${BENCHMARK} generated."
 done
 
 echo "All reports generated in benchmarks' directories."
