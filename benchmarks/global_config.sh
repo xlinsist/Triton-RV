@@ -14,8 +14,8 @@ export DEFAULT_DO_CLEAN="--clean"
 # 2. 目标平台与并发设置
 # ==========================================
 # 平台选择: "x86" 或 "rv" (RISC-V)
-export PLATFORM="rv"
-# export PLATFORM="x86"
+# export PLATFORM="rv"
+export PLATFORM="x86"
 
 # 编译线程数
 export MAX_MULTITHREADING=8
@@ -26,7 +26,8 @@ export THREADS_LIST="1 4 8"
 # ==========================================
 # 在这里列出你想运行的测试名称，用空格分隔
 # 示例: "matmul softmax layernorm correlation dropout resize rope warp"
-export BENCHMARKS_LIST="matmul"
+export BENCHMARKS_LIST="add"
+export MODE="Benchmark"
 
 # ==========================================
 # 4. 路径设置 (根据你的环境修改)

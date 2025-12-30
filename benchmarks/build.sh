@@ -3,7 +3,7 @@
 DIR=$(dirname $(readlink -f "$0"))
 
 # ==========================================
-# 加载全局配置
+# 1. 加载全局配置
 # ==========================================
 if [ -f "${DIR}/global_config.sh" ]; then    
   source "${DIR}/global_config.sh"
@@ -12,27 +12,23 @@ else
   exit 1
 fi
 
-# 允许命令行参数覆盖 global_config 中的设置
+# 允许命令行参数覆盖 global_config
 DO_CLEAN=${DO_CLEAN:-$DEFAULT_DO_CLEAN}
-
-# 将配置中的字符串转为数组
 BENCHMARKS=($BENCHMARKS_LIST)
-
 export LD_LIBRARY_PATH
+
 echo "--------------------------------------------------"
-echo "Mode: $MODE"
 echo "Platform: $PLATFORM"
-echo "Benchmarks to run: ${BENCHMARKS[@]}"
-echo "Build Targets: GCC=${ENABLE_GCC}, Clang=${ENABLE_CLANG}, Triton=${ENABLE_TRITON}"
+echo "Benchmarks: ${BENCHMARKS[@]}"
+echo "Target: Triton Only"
 echo "--------------------------------------------------"
 
 # ==========================================
-# 用户接口 (Help & Args)
+# 2. 用户接口 (Help & Args)
 # ==========================================
-help()
-{
+help() {
 cat <<END
-Build Triton-Benchmark.
+Build Triton-Benchmark (Triton Only).
 
 Usage: ./build.sh [--clean | --no-clean]
                   [--help]
@@ -56,7 +52,7 @@ while [ $# -gt 0 ]; do
 done
 
 # ==========================================
-# 工具链环境配置 (根据 Config 组装)
+# 3. 工具链配置 (Clang/LLVM for Triton)
 # ==========================================
 
 AR="${LLVM_BUILD_DIR}/bin/llvm-ar"
@@ -65,17 +61,14 @@ PYC="python"
 
 case $PLATFORM in
     x86)
-      CLANGPP="${CLANG_BUILD_DIR}/bin/clang++ ${X86_FLAGS} ${CPP_STD}"
-      GCC="${GCC_X86_BUILD_DIR}/bin/g++ ${X86_FLAGS} ${CPP_STD}"
+      CXX="${CLANG_BUILD_DIR}/bin/clang++ ${X86_FLAGS} ${CPP_STD}"
       OBJDUMP="${GCC_X86_BUILD_DIR}/bin/objdump"
       ;;
     rv)
-      CLANGPP="${CLANG_BUILD_DIR}/bin/clang++ --target=riscv64-unknown-linux-gnu \
+      CXX="${CLANG_BUILD_DIR}/bin/clang++ --target=riscv64-unknown-linux-gnu \
               --sysroot=${RISCV_GNU_TOOLCHAIN_DIR}/sysroot \
               --gcc-toolchain=${RISCV_GNU_TOOLCHAIN_DIR} \
               ${RV_FLAGS} ${CPP_STD}"
-      GCC="${RISCV_GNU_TOOLCHAIN_DIR}/bin/riscv64-unknown-linux-gnu-g++ \
-          ${RV_GCC_FLAGS} ${CPP_STD}"
       OBJDUMP="${RISCV_GNU_TOOLCHAIN_DIR}/bin/riscv64-unknown-linux-gnu-objdump"
       ;;
     ?*)
@@ -85,174 +78,144 @@ case $PLATFORM in
 esac
 
 # ==========================================
-# 核心构建函数 (保持大部分逻辑不变)
+# 4. 核心构建函数
 # ==========================================
 
+# 编译基础支持库
 build_support_lib() {
-  echo "  -> building support lib..."
-  # echo "${COMPILER} -fPIC -I ${DIR}/include -c ${SRC_DIR}/support/support.cpp -o ${OBJ_DIR}/support.o"
-  ${COMPILER} -fPIC -I ${DIR}/include -c ${SRC_DIR}/support/support.cpp -o ${OBJ_DIR}/support.o
-  ${OBJDUMP} -d ${OBJ_DIR}/support.o &> ${OBJ_DIR}/support.s
-  ${AR} rcs ${LIB_DIR}/libsupport.a ${OBJ_DIR}/support.o
-}
-
-build_c_kernel_lib_and_driver() {
-  name=$(basename ${C_KERNEL} .cpp)
-  echo "  -> building c kernel ${C_KERNEL}..."
-  ${COMPILER} -fPIC -I ${DIR}/include -c ${C_KERNEL} -fopenmp -o ${OBJ_DIR}/${name}.o
-  ${OBJDUMP} -d ${OBJ_DIR}/${name}.o &> ${OBJ_DIR}/${name}.s
-
-  find ${OBJ_DIR} -not -name "support.o" -name "*.o" | xargs ${AR} rcs ${LIB_DIR}/libkernel.a
-
-  name=$(basename ${DRIVER} .cpp)
-  echo "  -> generating elf of ${DRIVER}..."
-  KERNEL_BIN_DIR=${BIN_DIR}/${name}/
-  mkdir -p ${KERNEL_BIN_DIR}
-
-  ${COMPILER} "${DRIVER}" \
-    -I "${DIR}/include" -I "${KERNEL_LAUNCHER_INCLUDE_DIR}" \
-    -L "${LIB_DIR}" -fopenmp -lkernel -lsupport -latomic \
-    ${CPP_STD} -L${CLANG_BUILD_DIR}/lib -D"${KERNEL_ENABLE}" -fPIC \
-    -o "${KERNEL_BIN_DIR}/${name}.elf"
+  local obj_dir=$1
+  local lib_dir=$2
   
-  ${OBJDUMP} -d ${KERNEL_BIN_DIR}/${name}.elf &> ${KERNEL_BIN_DIR}/${name}.elf.s
-  cp ${SRC_DIR}/main/${name}.cfg ${KERNEL_BIN_DIR}
+  echo "  -> Building support lib..."
+  ${CXX} -fPIC -I ${DIR}/include -c ${SRC_DIR}/support/support.cpp -o ${obj_dir}/support.o
+  ${OBJDUMP} -d ${obj_dir}/support.o &> ${obj_dir}/support.s
+  ${AR} rcs ${lib_dir}/libsupport.a ${obj_dir}/support.o
 }
 
-build_triton_kernel_lib_and_driver() {
-  echo "  -> building triton kernel ${TRITON_KERNEL}..."
-  name=$(basename ${TRITON_KERNEL} .py)
-  KERNEL_AUX_FILE_DIR=${BUILD_DIR}/aux/src/${TUNNING_ARG}
-  mkdir -p ${KERNEL_LAUNCHER_INCLUDE_DIR}
-  mkdir -p ${KERNEL_AUX_FILE_DIR}
+# 编译 Triton Kernel 并链接 Driver
+build_triton_benchmark() {
+  local benchmark_name=$1
+  local triton_kernel_file=$2
+  local driver_file=$3
+  local tunning_arg=$4
 
-  ENABLE_AUTOTUNING=${TUNNING_ARG} \
+  # 定义构建目录结构
+  local TYPE="triton"
+  local LIB_DIR=${BUILD_DIR}/lib/${TYPE}
+  local BIN_DIR=${BUILD_DIR}/bin/${TYPE}
+  local OBJ_DIR=${BUILD_DIR}/obj/${TYPE}
+  
+  # Kernel 生成的相关路径
+  local KERNEL_LAUNCHER_INCLUDE_DIR=${BUILD_DIR}/aux/include
+  local KERNEL_AUX_FILE_DIR=${BUILD_DIR}/aux/src/${tunning_arg}
+
+  # 清理逻辑
+  if [ "x$DO_CLEAN" = "x--clean" ]; then
+    rm -rf $BIN_DIR $LIB_DIR $OBJ_DIR
+    rm -rf ${BUILD_DIR}/aux/
+  fi
+
+  # 创建目录
+  mkdir -p ${LIB_DIR} ${BIN_DIR} ${OBJ_DIR} ${KERNEL_LAUNCHER_INCLUDE_DIR} ${KERNEL_AUX_FILE_DIR}
+  
+  # RISC-V 特殊依赖拷贝
+  if [ "${PLATFORM}" == "rv" ] && [ -d "./openmp-sysroot-riscv/lib" ]; then
+    cp ./openmp-sysroot-riscv/lib/* ${LIB_DIR}
+  fi
+
+  # 1. 编译 Support Lib
+  build_support_lib "${OBJ_DIR}" "${LIB_DIR}"
+
+  # 2. 调用 Python 生成 Kernel 代码
+  echo "  -> Generating kernels from ${triton_kernel_file}..."
+  
+  ENABLE_AUTOTUNING=${tunning_arg} \
   KERNEL_LAUNCHER_INCLUDE_DIR=${KERNEL_LAUNCHER_INCLUDE_DIR} \
   KERNEL_AUX_FILE_DIR=${KERNEL_AUX_FILE_DIR} \
-  ${PYC} ${TRITON_KERNEL}
+  ${PYC} ${triton_kernel_file}
 
-  driver_name=$(basename ${DRIVER} .cpp)
-  KERNEL_BIN_DIR=${BIN_DIR}/${driver_name}
-  mkdir -p ${KERNEL_BIN_DIR}
-  cp ${SRC_DIR}/main/${driver_name}.cfg ${KERNEL_BIN_DIR}
+  local kernel_cpp_name=$(basename ${driver_file} .cpp)
+  local kernel_py_name=$(basename ${triton_kernel_file} .py)
+  [[ "$kernel_cpp_name" == "$kernel_py_name" ]] || { echo "Error: cpp name and py name mismatch"; exit 1; }
+  local kernel_bin_dir=${BIN_DIR}/${kernel_py_name}
+  mkdir -p ${kernel_bin_dir}
 
-  # Multi-thread compilation logic
-  [ -e /tmp/fd1_hyc ] || mkfifo /tmp/fd1_hyc
-  exec 6<>/tmp/fd1_hyc
-  rm -rf /tmp/fd1_hyc
+  cp ${SRC_DIR}/main/${kernel_py_name}.cfg  ${kernel_bin_dir}
+
+  # 3. 多线程编译生成的 Kernel 中间代码
+  echo "  -> Compiling kernels and linking..."
+  
+  # 初始化多线程文件描述符
+  [ -e /tmp/fd1_triton ] || mkfifo /tmp/fd1_triton
+  exec 6<>/tmp/fd1_triton
+  rm -rf /tmp/fd1_triton
   for ((i=1;i<=$MAX_MULTITHREADING;i++)); do echo >&6; done
 
+  # 遍历生成的调优目录
+  # 注意：这里假设 Python 脚本生成了对应的文件夹
+  shopt -s nullglob # 防止没匹配到文件时报错
   for tunning_dir in ${KERNEL_AUX_FILE_DIR}_*; do
     read -u6
     {
-        # echo "----------tuning ${tunning_dir}...-------------"
-        block_shape=${tunning_dir#*${TUNNING_ARG}_}
-        mkdir -p ${OBJ_DIR}/${name}_${TUNNING_ARG}_${block_shape}
+        block_shape=${tunning_dir#*${tunning_arg}_}
+        local current_obj_dir=${OBJ_DIR}/${kernel_py_name}_${tunning_arg}_${block_shape}
+        mkdir -p ${current_obj_dir}
+        
+        # 修正生成的 IR 代码
         sed -i 's/trunc nuw nsw/trunc/g; s/trunc nuw/trunc/g; s/trunc nsw/trunc/g' ${tunning_dir}/*.llir
 
-        # .llir -> .bc -> .o
+        # A. 编译 .llir -> .bc -> .o
         for kernel_ir in ${tunning_dir}/*.llir; do
-            kernel_name=$(basename ${kernel_ir} .llir)
-            ${AS} -o ${KERNEL_AUX_FILE_DIR}_${block_shape}/${kernel_name}.bc ${kernel_ir}
-            ${COMPILER} -c ${KERNEL_AUX_FILE_DIR}_${block_shape}/${kernel_name}.bc \
-                -o ${OBJ_DIR}/${name}_${TUNNING_ARG}_${block_shape}/${kernel_name}.o
-            ${OBJDUMP} -d ${OBJ_DIR}/${name}_${TUNNING_ARG}_${block_shape}/${kernel_name}.o \
-                 &> ${KERNEL_AUX_FILE_DIR}_${block_shape}/${kernel_name}.s
+            kname=$(basename ${kernel_ir} .llir)
+            ${AS} -o ${KERNEL_AUX_FILE_DIR}_${block_shape}/${kname}.bc ${kernel_ir}
+            ${CXX} -c ${KERNEL_AUX_FILE_DIR}_${block_shape}/${kname}.bc \
+                -o ${current_obj_dir}/${kname}.o
+            ${OBJDUMP} -d ${current_obj_dir}/${kname}.o \
+                 &> ${KERNEL_AUX_FILE_DIR}_${block_shape}/${kname}.s
         done
 
-        # launcher.cpp -> .o
+        # B. 编译 launcher.cpp -> .o
         for kernel_launcher in ${tunning_dir}/*.cpp; do
-            launcher_name=$(basename ${kernel_launcher} .cpp)
-            ${COMPILER} -I ${DIR}/include -I ${KERNEL_LAUNCHER_INCLUDE_DIR} -c ${kernel_launcher} \
-                -fopenmp -o ${OBJ_DIR}/${name}_${TUNNING_ARG}_${block_shape}/${launcher_name}.o
+            lname=$(basename ${kernel_launcher} .cpp)
+            ${CXX} -I ${DIR}/include -I ${KERNEL_LAUNCHER_INCLUDE_DIR} -c ${kernel_launcher} \
+                -fopenmp -o ${current_obj_dir}/${lname}.o
         done
 
-        # Link kernel lib
-        find ${OBJ_DIR}/${name}_${TUNNING_ARG}_${block_shape}/ -not -name "support.o" -name "*.o" | \
-            xargs ${AR} rcs ${LIB_DIR}/libkernel_${TUNNING_ARG}_${block_shape}.a
+        # C. 链接为静态库 (libkernel_xxx.a)
+        find ${current_obj_dir}/ -not -name "support.o" -name "*.o" | \
+            xargs ${AR} rcs ${LIB_DIR}/libkernel_${tunning_arg}_${block_shape}.a
         
-        # Compile driver
-        ${COMPILER} ${DRIVER} -I ${DIR}/include -I ${KERNEL_LAUNCHER_INCLUDE_DIR} \
+        # D. 最终链接生成可执行文件 (ELF)
+        ${CXX} ${driver_file} -I ${DIR}/include -I ${KERNEL_LAUNCHER_INCLUDE_DIR} \
             -L ${LIB_DIR} -fopenmp -L${CLANG_BUILD_DIR}/lib \
-            -lkernel_${TUNNING_ARG}_${block_shape} -lsupport -latomic \
-            ${CPP_STD} -D${KERNEL_ENABLE} -fPIC \
-            -o ${KERNEL_BIN_DIR}/${driver_name}_${TUNNING_ARG}_${block_shape}.elf
+            -lkernel_${tunning_arg}_${block_shape} -lsupport -latomic \
+            ${CPP_STD} -DTRITON_KERNEL_ENABLE -fPIC \
+            -o ${kernel_bin_dir}/${kernel_py_name}_${tunning_arg}_${block_shape}.elf
         
         echo >&6
     } &
   done
   wait
   exec 6>&-
-}
-
-create_dir_hierarchy(){
-  mkdir -p ${LIB_DIR} ${BIN_DIR} ${OBJ_DIR}
-  if [ "${PLATFORM}" == "rv" ]; then
-    cp ./openmp-sysroot-riscv/lib/* ${LIB_DIR}
-  fi
-}
-
-build_driver() {
-  local toolchain=$1
-  local benchmark_name=$2
-  
-  case $toolchain in
-    gcc)    COMPILER=${GCC};     TYPE="gcc";;
-    clang)  COMPILER=${CLANGPP}; TYPE="clang";;
-    triton) COMPILER=${CLANGPP}; TYPE="triton";;
-    *) echo "Unknown toolchain: $toolchain"; exit 1 ;;
-  esac
-
-  LIB_DIR=${BUILD_DIR}/lib/${TYPE}
-  BIN_DIR=${BUILD_DIR}/bin/${TYPE}
-  OBJ_DIR=${BUILD_DIR}/obj/${TYPE}
-  
-  if [ "$toolchain" == "triton" ]; then
-    KERNEL_ENABLE=TRITON_KERNEL_ENABLE
-  else
-    KERNEL_ENABLE=C_KERNEL_ENABLE
-  fi
-
-  # Cleaning
-  if [ "x$DO_CLEAN" = "x--clean" ]; then
-    rm -rf $BIN_DIR $LIB_DIR $OBJ_DIR
-    [ "${KERNEL_ENABLE}" == "TRITON_KERNEL_ENABLE" ] && rm -rf ${BUILD_DIR}/aux/
-  fi
-
-  create_dir_hierarchy
-  if [ "${KERNEL_ENABLE}" == "TRITON_KERNEL_ENABLE" ]; then
-    mkdir -p ${KERNEL_LAUNCHER_INCLUDE_DIR}
-    mkdir -p ${BUILD_DIR}/aux/src
-  fi
-
-  build_support_lib
-
-  if [ "${MODE}" == "Accuracy" ]; then COMPILER+=" -DCHECK_ACCURACY "; fi
-
-  if [ "${KERNEL_ENABLE}" == "C_KERNEL_ENABLE" ]; then
-    build_c_kernel_lib_and_driver
-  else
-    build_triton_kernel_lib_and_driver "$benchmark_name"
-  fi
+  shopt -u nullglob
 }
 
 # ==========================================
-# 主循环 (Main Execution)
+# 5. 主循环 (Main Execution)
 # ==========================================
 
 for BENCHMARK in "${BENCHMARKS[@]}"; do
   echo ">>> Processing Benchmark: $BENCHMARK"
 
-  # 1. 自动推导文件路径 (Convention over Configuration)
-  export C_KERNEL="${SRC_DIR}/c/${BENCHMARK}.cpp"
-  export TRITON_KERNEL="${SRC_DIR}/triton/${BENCHMARK}.py"
-  export DRIVER="${SRC_DIR}/main/${BENCHMARK}.cpp"
+  # 路径配置
+  TRITON_KERNEL="${SRC_DIR}/triton/${BENCHMARK}.py"
+  DRIVER="${SRC_DIR}/main/${BENCHMARK}.cpp"
 
-  # 2. 映射 Kernel Tuning Name (如果每个benchmark名字都不规则，只能在这里列出)
+  # 映射 Kernel Tuning Name
   case "$BENCHMARK" in
     "matmul")      TUNNING_ARG="matmul_kernel" ;;
     "softmax")     TUNNING_ARG="softmax_kernel" ;;
-    "layernorm")   TUNNING_ARG="_layer_norm_fwd_fused" ;; # 特殊命名
+    "layernorm")   TUNNING_ARG="_layer_norm_fwd_fused" ;;
     "correlation") TUNNING_ARG="correlation_kernel" ;;
     "dropout")     TUNNING_ARG="dropout_kernel" ;;
     "resize")      TUNNING_ARG="resize_kernel" ;;
@@ -263,36 +226,19 @@ for BENCHMARK in "${BENCHMARKS[@]}"; do
        TUNNING_ARG="${BENCHMARK}_kernel"
        ;;
   esac
-  export TUNNING_ARG
 
-  # 检查文件是否存在
-  if [[ ! -f "$C_KERNEL" ]] && [[ ! -f "$TRITON_KERNEL" ]]; then
-     echo "Files for $BENCHMARK not found, skipping."
+  # 检查必要文件
+  if [[ ! -f "$TRITON_KERNEL" ]]; then
+     echo "Triton kernel file for $BENCHMARK not found at $TRITON_KERNEL, skipping."
      continue
   fi
 
+  # 设置当前 benchmark 的构建根目录
   BUILD_DIR="${DIR}/build-${BENCHMARK}"
-  KERNEL_LAUNCHER_INCLUDE_DIR="${BUILD_DIR}/aux/include"
-
-  # 3. 根据 global_config.sh 的开关执行构建
-  if [ "${ENABLE_GCC}" == "1" ]; then
-      echo "  [GCC] Building..."
-      build_driver gcc $BENCHMARK
-  fi
-
-  if [ "${ENABLE_CLANG}" == "1" ]; then
-      echo "  [Clang] Building..."
-      build_driver clang $BENCHMARK
-  fi
-
-  if [ "${ENABLE_TRITON}" == "1" ]; then
-      echo "  [Triton] Building..."
-      build_driver triton $BENCHMARK
-  fi
   
+  # 执行构建
+  build_triton_benchmark "$BENCHMARK" "$TRITON_KERNEL" "$DRIVER" "$TUNNING_ARG"
+
   echo "<<< Finished $BENCHMARK"
   echo ""
-
-  # 清理环境变量，防止污染下一次循环
-  unset C_KERNEL TRITON_KERNEL DRIVER TUNNING_ARG
 done

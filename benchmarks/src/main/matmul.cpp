@@ -1,144 +1,63 @@
-#ifdef C_KERNEL_ENABLE
-#include "kernel/matmul.h"
-#endif
-
 #ifdef TRITON_KERNEL_ENABLE
 #include "matmul_kernel_launcher.h"
 #endif
 
 #include "support/support.h"
-#include <cassert>
-#include <chrono>
-#include <cstring>
+#include <vector>
+#include <cmath>
 #include <iostream>
-#include <memory>
-#include <random>
-#include <stdio.h>
-#include <stdlib.h>
-
-using namespace std;
-using std::chrono::high_resolution_clock;
-using std::chrono::milliseconds;
 
 int main(int argc, char *argv[]) {
-  int M = 179;
-  int N = 321;
-  int K = 167;
+  // 1. 默认参数
+  int M = 32, N = 32, K = 32;
   int RUN_COUNT = 10;
 
+  // 2. 解析参数
   if (argc >= 2) {
     std::vector<int> Shape = splitStringToInts(argv[1]);
-
-    if (Shape.size()) {
-      assert(Shape.size() == 4 && "Invalid shape format: MxNxKxRUN_COUNT\n");
-      M = Shape.at(0);
-      N = Shape.at(1);
-      K = Shape.at(2);
-      RUN_COUNT = Shape.at(3);
+    if (Shape.size() == 4) {
+      M = Shape[0]; N = Shape[1]; K = Shape[2]; RUN_COUNT = Shape[3];
+    } else {
+        std::cerr << "Invalid shape format: MxNxKxRUN_COUNT" << std::endl;
+        return -1;
     }
   }
 
-  printf("Data shape %dx%dx%dx%d\n", M, N, K, RUN_COUNT);
+  printf("Matmul Data shape %dx%dx%dx%d\n", M, N, K, RUN_COUNT);
 
-  float *arg0 = (float *)malloc(M * K * sizeof(float));
-  float *arg1 = (float *)malloc(K * N * sizeof(float));
+  // 3. 资源分配与初始化 (使用 vector 替代 malloc)
+  std::vector<float> arg0(M * K);
+  std::vector<float> arg1(K * N);
+  std::vector<float> real_out(M * N, 0.0f); // 初始化为0
 
-  float *ref_out = (float *)malloc(M * N * sizeof(float));
-  float *real_out = (float *)malloc(M * N * sizeof(float));
+  random_init(arg0);
+  random_init(arg1);
 
-  memset(real_out, 0, M * N * sizeof(float));
-
-#ifdef CHECK_ACCURACY
-  std::string DB = getDB(argv[1]);
-  FILE *file = fopen(DB.c_str(), "rb");
-  if (file) {
-    printf("File %s open for read\n", DB.c_str());
-
-    fread(arg0, sizeof(float), M * K, file);
-    fread(arg1, sizeof(float), K * N, file);
-    fread(ref_out, sizeof(float), M * N, file);
-  } else {
-#endif
-    // Will be used to obtain a seed for the random number engine
-    std::random_device rd;
-    std::mt19937 gen(rd()); // Standard mersenne_twister_engine seeded with rd()
-    std::normal_distribution<> norm_dis(0, 1);
-    for (int i = 0; i < M; ++i) {
-      for (int j = 0; j < K; ++j) {
-        arg0[i * K + j] = norm_dis(gen);
-      }
-    }
-
-    for (int i = 0; i < K; ++i) {
-      for (int j = 0; j < N; ++j) {
-        arg1[i * N + j] = norm_dis(gen);
-      }
-    }
-#ifdef CHECK_ACCURACY
-  }
-#endif
-
-  // triton kernel
 #ifdef TRITON_KERNEL_ENABLE
-  high_resolution_clock::time_point beginTime = high_resolution_clock::now();
-  for (int i = 0; i < RUN_COUNT; i++) {
-    matmul_kernel_omp(ceil(1.0 * M / matmul_kernel_BLOCK_SIZE_M) *
-                          ceil(1.0 * N / matmul_kernel_BLOCK_SIZE_N),
-                      1, 1, matmul_kernel, arg0, arg1, real_out, M, N, K, K, 1,
-                      N, 1, N, 1);
-  }
-  high_resolution_clock::time_point endTime = high_resolution_clock::now();
-  milliseconds timeInterval =
-      std::chrono::duration_cast<milliseconds>(endTime - beginTime);
+  // 4. 定义 Grid 计算逻辑和 Kernel 调用
+  // Grid 的计算通常与 Problem Size 相关，保留在 host 程序中
+  int grid_M = std::ceil(1.0 * M / matmul_kernel_BLOCK_SIZE_M);
+  int grid_N = std::ceil(1.0 * N / matmul_kernel_BLOCK_SIZE_N);
+  int grid_size = grid_M * grid_N;
 
-  std::chrono::duration<double> triton_correlation_time_interval =
-      endTime - beginTime;
-  /// NOTE: Format running time to generate performance report easily
-  PRINT_KERNEL_RUNNING_TIME(TRITON_KERNEL,
-                            triton_correlation_time_interval.count())
-
+  // 5. 调用通用 Benchmark
+  // 使用 Lambda 捕获所有需要的变量
+  benchmark_kernel(RUN_COUNT, [&]() {
+    matmul_kernel_omp(
+        grid_size,  // gridX
+        1, 1,       // gridY, gridZ
+        matmul_kernel, 
+        arg0.data(), arg1.data(), real_out.data(), // 获取原始指针
+        M, N, K,    // Dimensions
+        K, 1,       // Strides for arg0 (MxK) -> row major: stride_row=K, stride_col=1
+        N, 1,       // Strides for arg1 (KxN) -> row major: stride_row=N, stride_col=1
+        N, 1        // Strides for out  (MxN)
+    );
+  });
+#else
+  std::cerr << "Triton Kernel Not Enabled!" << std::endl;
 #endif
 
-// c kernel
-#ifdef C_KERNEL_ENABLE
-
-  high_resolution_clock::time_point beginTime = high_resolution_clock::now();
-  for (int i = 0; i < RUN_COUNT; i++) {
-    matmul(arg0, arg1, real_out, M, N, K);
-  }
-  high_resolution_clock::time_point endTime = high_resolution_clock::now();
-
-  milliseconds timeInterval =
-      std::chrono::duration_cast<milliseconds>(endTime - beginTime);
-
-  std::chrono::duration<double> c_correlation_time_interval =
-      endTime - beginTime;
-  /// NOTE: Format running time to generate performance report easily
-  PRINT_KERNEL_RUNNING_TIME(C_KERNEL, c_correlation_time_interval.count())
-#endif
-
-#ifdef CHECK_ACCURACY
-  if (file == nullptr) {
-    file = fopen(DB.c_str(), "wb");
-
-    printf("File %s open for write\n", DB.c_str());
-    assert(file);
-
-    fwrite(arg0, sizeof(float), M * K, file);
-    fwrite(arg1, sizeof(float), K * N, file);
-
-    memcpy(ref_out, real_out, M * N * sizeof(float));
-    fwrite(ref_out, sizeof(float), M * N, file);
-  }
-  fclose(file);
-
-  check_tensor(ref_out, real_out, M * N, "out");
-#endif
-
-  free(arg0);
-  free(arg1);
-
-  free(ref_out);
-  free(real_out);
+  // vector 自动析构，无需 free
   return 0;
 }
