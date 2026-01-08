@@ -213,6 +213,7 @@ for BENCHMARK in "${BENCHMARKS[@]}"; do
 
   # 映射 Kernel Tuning Name
   case "$BENCHMARK" in
+    "add")      TUNNING_ARG="add" ;;
     "matmul")      TUNNING_ARG="matmul_kernel" ;;
     "softmax")     TUNNING_ARG="softmax_kernel" ;;
     "layernorm")   TUNNING_ARG="_layer_norm_fwd_fused" ;;

@@ -129,6 +129,8 @@ def test_matmul():
     # b = torch.full((rows2, cols2), 1, device='cpu', dtype=torch.float32)
     triton_output = matmul(a, b)
     torch_output = torch.matmul(a, b)
+    print(triton_output)
+    print(torch_output)
     '''
     print(f"triton_output={triton_output}")
     print(f"torch_output={torch_output}")

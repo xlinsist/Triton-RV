@@ -1,135 +1,66 @@
-#ifdef C_KERNEL_ENABLE
-#include "kernel/dropout.h"
-#endif
-
 #ifdef TRITON_KERNEL_ENABLE
 #include "dropout_kernel_launcher.h"
 #endif
 
 #include "support/support.h"
-#include <chrono>
-#include <cstdio>
-#include <cstdlib>
+#include <vector>
+#include <iostream>
 #include <cassert>
-#include <cstring>
-#include <algorithm>
-#include <random>
+#include <cmath>
 
-int main(int argc, char *argv[])
-{
-    int N = 4096;
-    int RUN_COUNT = 10;
+int main(int argc, char *argv[]) {
+  // 1. 默认参数
+  int N = 4096;
+  int RUN_COUNT = 10;
+  float ratio = 0.5f;
+  int seed = 1234;
 
-    float ratio = 0.5;
-    int seed = 0;
-
-    if (argc >= 2)
-    {
-        std::vector<int> Shape = splitStringToInts(argv[1]);
-        if (Shape.size())
-        {
-            assert(Shape.size() == 2 && "Invalid shape format: NxRUN_COUNT\n");
-            N = Shape.at(0);
-            RUN_COUNT = Shape.at(1);
-        }
+  // 2. 解析参数
+  if (argc >= 2) {
+    std::vector<int> Shape = splitStringToInts(argv[1]);
+    if (Shape.size() == 2) {
+      N = Shape[0]; RUN_COUNT = Shape[1];
+    } else {
+        std::cerr << "Invalid shape format: NxRUN_COUNT" << std::endl;
+        return -1;
     }
+  }
 
-    printf("Data shape %dx%d\n", N, RUN_COUNT);
+  printf("Dropout Data shape N:%d\n", N);
 
+  // 3. 初始化
+  std::vector<float> input(N);
+  std::vector<float> real_out(N, 0.0f);
 
-    assert(N != 0 && "Invalid shape\n");
-
-    float *input = (float *)malloc(N * sizeof(float));
-
-    float *real_out = (float *)malloc(N * sizeof(float));
-
-    memset(real_out, 0, N * sizeof(float));
-
-#ifdef CHECK_ACCURACY
-    std::string DB = getDB(argv[1]);
-    FILE *file = fopen(DB.c_str(), "rb");
-    if (file)
-    {
-        printf("File %s open for read\n", DB.c_str());
-        fread(input, sizeof(float), N, file);
-    }
-    else
-    {
-#endif
-        // Will be used to obtain a seed for the random number engine
-        std::random_device rd;
-        std::mt19937 gen(rd()); // Standard mersenne_twister_engine seeded with rd()
-        std::uniform_real_distribution<> dis(-1, 1);
-        std::generate(input, input + N, [&]() { return dis(gen); });
-#ifdef CHECK_ACCURACY
-    }
-#endif
+  random_init(input, -1.0, 1.0);
 
 #ifdef TRITON_KERNEL_ENABLE
-    // run triton kernel
+  // 4. Grid
+  // 假设 BLOCK_SIZE 已在头文件中定义
+  int grid = std::ceil((float)N / dropout_kernel_BLOCK_SIZE);
 
-    std::chrono::high_resolution_clock::time_point begin = std::chrono::high_resolution_clock::now();
-    int  grid = ceil((float)N / dropout_kernel_BLOCK_SIZE);
+  // 5. Benchmark
+  benchmark_kernel(RUN_COUNT, [&]() {
+    dropout_kernel_omp(
+        grid, 1, 1, 
+        &dropout_kernel, 
+        input.data(), 
+        real_out.data(), 
+        N, ratio, seed
+    );
+  });
 
-    for (int i = 0; i < RUN_COUNT; i++)
-    {
-        dropout_kernel_omp(grid, 1, 1, &dropout_kernel, input, real_out, N, ratio, seed);
-    }
-    std::chrono::high_resolution_clock::time_point end = std::chrono::high_resolution_clock::now();
-    std::chrono::milliseconds time_interval = std::chrono::duration_cast<std::chrono::milliseconds>(end - begin);
+  // 6. 简单的 Ratio 验证 (保留原代码逻辑)
+  int zero_count = 0;
+  for (float val : real_out) {
+      if (val == 0.0f) zero_count++;
+  }
+  printf("Triton Dropout Actual Ratio: %.3f (Expected: %.3f)\n", 
+         (float)zero_count / N, ratio);
 
-    printf("Triton output:\n");
-    for (int i = 0; i < std::min(16, N); i++)
-    {
-        printf("%.3f  ", real_out[i]);
-        if (i == std::min(16, N) - 1)
-            printf("...\n");
-    }
-
-    // check ratio
-    int count = 0;
-    for (int i = 0; i < N; i++)
-    {
-        if (real_out[i] == 0)
-            count++;
-    }
-    printf("Triton Dropout ratio: %.3f\n", (float)count / N);
-
-    PRINT_KERNEL_RUNNING_TIME(TRITON_KERNEL, std::chrono::duration<double>(end - begin).count())
-
+#else
+  std::cerr << "Triton Kernel Not Enabled!" << std::endl;
 #endif
 
-#ifdef C_KERNEL_ENABLE
-    // run c++ kernel
-
-    std::chrono::high_resolution_clock::time_point begin_c = std::chrono::high_resolution_clock::now();
-    for (int i = 0; i < RUN_COUNT; i++)
-    {
-        dropout(input, real_out, N, ratio, seed);
-    }
-    std::chrono::high_resolution_clock::time_point end_c = std::chrono::high_resolution_clock::now();
-    std::chrono::milliseconds time_interval_c = std::chrono::duration_cast<std::chrono::milliseconds>(end_c - begin_c);
-
-    printf("c++ output:\n");
-    for (int i = 0; i < std::min(16, N); i++)
-    {
-        printf("%.3f  ", real_out[i]);
-        if (i == std::min(16, N) - 1)
-            printf("...\n");
-    }
-
-    // check ratio
-    int count_c = 0;
-    for (int i = 0; i < N; i++)
-    {
-        if (real_out[i] == 0)
-            count_c++;
-    }
-    printf("C++ Dropout ratio: %.3f\n", (float)count_c / N);
-
-    PRINT_KERNEL_RUNNING_TIME(C_KERNEL, std::chrono::duration<double>(end_c - begin_c).count())
-
-#endif
-
-    return 0;
+  return 0;
 }

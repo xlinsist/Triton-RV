@@ -19,13 +19,17 @@ std::vector<int> splitStringToInts(const std::string &str, char delimiter = 'x')
 
 // 1. 通用随机初始化函数
 // 使用 std::vector 自动管理内存，避免手动 malloc/free
-inline void random_init(std::vector<float>& data) {
+template <typename T>
+void random_init(std::vector<T>& data, double min_val = 0, double max_val = 1) {
     static std::random_device rd;
     static std::mt19937 gen(rd());
-    static std::normal_distribution<float> norm_dis(0, 1);
 
-    for (size_t i = 0; i < data.size(); ++i) {
-        data[i] = norm_dis(gen);
+    if constexpr (std::is_floating_point_v<T>) {
+        std::uniform_real_distribution<T> dis((T)min_val, (T)max_val);
+        for (auto &v : data) v = dis(gen);
+    } else {
+        std::uniform_int_distribution<int> dis((int)min_val, (int)max_val);
+        for (auto &v : data) v = static_cast<T>(dis(gen));
     }
 }
 

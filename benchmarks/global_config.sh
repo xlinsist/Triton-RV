@@ -25,8 +25,8 @@ export THREADS_LIST="1 4 8"
 # 3. 基准测试列表 (Benchmarks)
 # ==========================================
 # 在这里列出你想运行的测试名称，用空格分隔
-# 示例: "matmul softmax layernorm correlation dropout resize rope warp"
-export BENCHMARKS_LIST="add"
+# 示例: "add matmul softmax layernorm correlation dropout resize rope warp"
+export BENCHMARKS_LIST="matmul"
 export MODE="Benchmark"
 
 # ==========================================
