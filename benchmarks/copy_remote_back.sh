@@ -1,17 +1,20 @@
 #!/bin/bash
 
-DIR=`dirname $0`
-# REMOTE_URL="user@192.168.15.167" # 根据远程平台做修改
-REMOTE_URL="user@192.168.15.175" # 根据远程平台做修改
+# 获取当前脚本的目录
+DIR=$(dirname $(readlink -f "$0"))
 
-# 将数组改为字符串
-BENCHMARKS_STR="matmul softmax correlation layernorm dropout rope resize"
+# 加载全局配置
+if [ ! -f "${DIR}/global_config.sh" ]; then    
+  echo "Error: global_config.sh not found!"    
+  exit 1
+fi
+source "${DIR}/global_config.sh"
 
-# 将字符串转换为数组进行循环
-BENCHMARKS=($BENCHMARKS_STR)
+# 将基准测试列表转换为数组
+IFS=' ' read -r -a BENCHMARKS <<< "$BENCHMARKS_LIST"
 
 for BENCHMARK in "${BENCHMARKS[@]}"; do
-    REMOTE_BASE="/home/user/triton-benchmark/build-rv/build-${BENCHMARK}/report.xls" # 根据远程平台做修改
+    REMOTE_BASE="${REMOTE_BASE}/build-${BENCHMARK}/report.xls"
     REMOTE="${REMOTE_URL}:${REMOTE_BASE}"
 
     BUILD_DIR=${DIR}/build-${BENCHMARK}/

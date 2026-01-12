@@ -6,6 +6,7 @@
 export ENABLE_GCC=0
 export ENABLE_CLANG=0
 export ENABLE_TRITON=1
+SUBDIRS="triton"
 
 # 是否默认清理构建目录 (--clean / --no-clean)
 export DEFAULT_DO_CLEAN="--clean"
@@ -14,18 +15,21 @@ export DEFAULT_DO_CLEAN="--clean"
 # 2. 目标平台与并发设置
 # ==========================================
 # 平台选择: "x86" 或 "rv" (RISC-V)
-# export PLATFORM="rv"
-export PLATFORM="x86"
+export PLATFORM="rv"
+REMOTE_URL="user@192.168.15.167" # 根据远程平台做修改
+# REMOTE_URL="user@192.168.15.175" # 根据远程平台做修改
+REMOTE_BASE="/home/user/triton-benchmark/build-rv" # 根据远程平台做修改
 
 # 编译线程数
 export MAX_MULTITHREADING=8
-export THREADS_LIST="1 4 8"
+export THREADS_LIST="1"
 
 # ==========================================
 # 3. 基准测试列表 (Benchmarks)
 # ==========================================
 # 在这里列出你想运行的测试名称，用空格分隔
 # 示例: "add matmul softmax layernorm correlation dropout resize rope warp"
+# export BENCHMARKS_LIST="matmul softmax layernorm correlation dropout resize rope warp"
 export BENCHMARKS_LIST="matmul"
 export MODE="Benchmark"
 
