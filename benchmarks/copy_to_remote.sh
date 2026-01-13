@@ -1,52 +1,84 @@
 #!/bin/bash
 
-# 获取当前脚本的目录
-DIR=$(dirname $(readlink -f "$0"))
+# This script copies necessary build artifacts and scripts to the remote machine for execution.
 
-# 加载全局配置
-if [ ! -f "${DIR}/global_config.sh" ]; then    
-  echo "Error: global_config.sh not found!"    
+# Get the directory of the current script.
+DIR=$(dirname "$(readlink -f "$0")")
+
+# Load global configuration.
+if [ ! -f "${DIR}/global_config.sh" ]; then
+  echo "Error: global_config.sh not found in ${DIR}"
   exit 1
 fi
 source "${DIR}/global_config.sh"
 
-# 将基准测试列表转换为数组
+# Determine which compilers are enabled based on global config.
+COMPILERS=()
+if [ "$ENABLE_GCC" -eq 1 ]; then
+  COMPILERS+=("gcc")
+fi
+if [ "$ENABLE_CLANG" -eq 1 ]; then
+  COMPILERS+=("clang")
+fi
+if [ "$ENABLE_TRITON" -eq 1 ]; then
+  COMPILERS+=("triton")
+fi
+
+if [ ${#COMPILERS[@]} -eq 0 ]; then
+  echo "Warning: No compilers enabled in global_config.sh. Nothing to copy."
+fi
+
+# Convert benchmark and script lists into bash arrays.
 IFS=' ' read -r -a BENCHMARKS <<< "$BENCHMARKS_LIST"
+IFS=' ' read -r -a SCRIPTS <<< "$SCRIPTS_TO_COPY"
 
-echo "Copying openmp-sysroot-riscv to ${REMOTE_BASE}"
-rsync -avz --ignore-existing \
-  "${DIR}/openmp-sysroot-riscv/" \
-  "${REMOTE_URL}:${REMOTE_BASE}/openmp-sysroot-riscv/"
+# Ensure remote base directory exists.
+echo "Ensuring remote base directory exists at ${REMOTE_URL}:${REMOTE_BASE}"
+ssh "${REMOTE_URL}" "mkdir -p ${REMOTE_BASE}"
 
+# Copy the OpenMP sysroot for RISC-V platform.
+if [ "$PLATFORM" = "rv" ]; then
+    echo "Copying openmp-sysroot-riscv to ${REMOTE_BASE}"
+    rsync -avz --ignore-existing \
+      "${DIR}/openmp-sysroot-riscv/" \
+      "${REMOTE_URL}:${REMOTE_BASE}/openmp-sysroot-riscv/"
+fi
+
+# Copy compiled artifacts for each benchmark.
 for BENCHMARK in "${BENCHMARKS[@]}"; do
   REMOTE_BIN_BASE="${REMOTE_BASE}/build-${BENCHMARK}/bin"
   LOCAL_BIN_DIR="${DIR}/build-${BENCHMARK}/bin"
-  
-  for SUBDIR in "${SUBDIRS[@]}"; do
-    LOCAL_DIR="${LOCAL_BIN_DIR}/${SUBDIR}/${BENCHMARK}"
-    REMOTE_DIR="${REMOTE_URL}:${REMOTE_BIN_BASE}/${SUBDIR}/${BENCHMARK}"
-    REMOTE_FULL_PATH="${REMOTE_BIN_BASE}/${SUBDIR}/${BENCHMARK}"
+
+  for COMPILER in "${COMPILERS[@]}"; do
+    # Path to the specific benchmark's compiled output for the current compiler.
+    LOCAL_KERNEL_DIR="${LOCAL_BIN_DIR}/${COMPILER}/${BENCHMARK}"
     
-    # 创建并清空远程目录
-    ssh "${REMOTE_URL}" "mkdir -p ${REMOTE_FULL_PATH} && rm -rf ${REMOTE_FULL_PATH}/*"
-    
-    # 复制.elf文件
-    if ls "${LOCAL_DIR}"/*.{elf,cfg} >/dev/null 2>&1; then
-      echo "Copying ${LOCAL_DIR}/*.{elf,cfg} to ${REMOTE_DIR}"
-      scp -r "${LOCAL_DIR}"/*.{elf,cfg} "${REMOTE_DIR}/"
+    # Check if there are files to copy
+    if ls "${LOCAL_KERNEL_DIR}"/*.{elf,cfg} >/dev/null 2>&1; then
+      REMOTE_KERNEL_DIR_BASE="${REMOTE_BIN_BASE}/${COMPILER}"
+      REMOTE_KERNEL_FULL_PATH="${REMOTE_KERNEL_DIR_BASE}/${BENCHMARK}"
+      REMOTE_TARGET="${REMOTE_URL}:${REMOTE_KERNEL_DIR_BASE}/"
+      
+      echo "Copying artifacts for ${BENCHMARK} (${COMPILER}) to ${REMOTE_TARGET}"
+
+      # Create remote directory and copy files.
+      ssh "${REMOTE_URL}" "mkdir -p ${REMOTE_KERNEL_FULL_PATH}"
+      scp -r "${LOCAL_KERNEL_DIR}"/*.{elf,cfg} "${REMOTE_URL}:${REMOTE_KERNEL_FULL_PATH}/"
     else
-      echo "Warning: No .elf or .cfg files found in ${LOCAL_DIR}"
+      echo "Warning: No .elf or .cfg files found in ${LOCAL_KERNEL_DIR}. Skipping copy for ${BENCHMARK} (${COMPILER})."
     fi
   done
 done
 
-echo "Copying global_config.sh to ${REMOTE_BASE}"
-scp "${DIR}/global_config.sh" "${REMOTE_URL}:${REMOTE_BASE}/"
-
-echo "Copying run.sh to ${REMOTE_BASE}"
-scp "${DIR}/run.sh" "${REMOTE_URL}:${REMOTE_BASE}/"
-
-echo "Copying report.sh to ${REMOTE_BASE}"
-scp "${DIR}/report.sh" "${REMOTE_URL}:${REMOTE_BASE}/"
+# Copy utility scripts to the remote machine.
+echo "Copying utility scripts to ${REMOTE_URL}:${REMOTE_BASE}/"
+for SCRIPT in "${SCRIPTS[@]}"; do
+    if [ -f "${DIR}/${SCRIPT}" ]; then
+        echo "  - Copying ${SCRIPT}"
+        scp "${DIR}/${SCRIPT}" "${REMOTE_URL}:${REMOTE_BASE}/"
+    else
+        echo "Warning: Script '${SCRIPT}' not found, cannot copy to remote."
+    fi
+done
 
 echo "All files processed."

@@ -58,7 +58,6 @@ def parse_performance_data(file_path, benchmark):
     
     # 初始化存储结果的列表
     results = []
-    
     # 解析每一行数据
     for line in data_lines:
         if not line.strip():  # 跳过空行
@@ -69,7 +68,6 @@ def parse_performance_data(file_path, benchmark):
         
         for i, value in enumerate(values):
             method_info = columns[i + 1].strip()
-            
             # 根据不同的 benchmark 类型来选择合适的正则表达式
             if benchmark == "matmul":
                 match = re.match(r'(gcc|clang|triton)_(T\d+)(?:_matmul_kernel_(\d+_\d+_\d+))?', method_info)
@@ -93,6 +91,7 @@ def parse_performance_data(file_path, benchmark):
                 thread = int(match.group(2)[1:])  # 去掉"T"并转换为整数
                 
                 vec_param = None # 默认为 None (针对 gcc/clang 或者解析失败的情况)
+                block_param = None
                 
                 # 只有 method 为 triton 且正则捕获组3存在时才处理参数
                 if method == "triton" and match.group(3):
@@ -145,6 +144,10 @@ if __name__ == "__main__":
         origin_df = parse_performance_data(input_file, benchmark)
         origin_df.to_csv(f"./build-{benchmark}/performance_report.csv", index=False)
 
+        if origin_df.empty:
+            print(f"Warning: No data parsed from {input_file}. Skipping processing for {benchmark}.")
+            continue
+
         triton_df = find_best_triton_params(origin_df)
         result_df = pd.concat([origin_df[origin_df['method'] == 'triton'], triton_df], ignore_index=True)
         result_df = result_df.sort_values(by=['shape', 'method', 'thread', 'block_param', 'vec_param'])
@@ -160,6 +163,6 @@ if __name__ == "__main__":
         # )
 
         overall_df = pd.concat([overall_df, result_df], ignore_index=True)
-    # overall_df.to_csv("./performance_report_overall.csv", index=False)
-    filter_df = filter_data(overall_df)
-    filter_df.to_csv("./performance_report_filtered.csv", index=False)
+    overall_df.to_csv("./performance_report_overall.csv", index=False)
+    # filter_df = filter_data(overall_df)
+    # filter_df.to_csv("./performance_report_filtered.csv", index=False)

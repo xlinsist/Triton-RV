@@ -1,67 +1,95 @@
 #!/bin/bash
 
+# ==============================================================================
+#                            Global Build Configuration
+#
+# This file centralizes all user-specific settings for the Triton benchmark suite.
+# Modify the variables in this file to configure the build and run process.
+# ==============================================================================
+
+
 # ==========================================
-# 1. 核心构建开关 (1=启用, 0=禁用)
+# 1. Core Build Switches
 # ==========================================
+# Set to 1 to enable, 0 to disable compilation with a specific toolchain.
+# The `run.sh` and `copy_to_remote.sh` scripts will use these flags
+# to determine which subdirectories (e.g., 'gcc', 'clang', 'triton') to process.
 export ENABLE_GCC=0
 export ENABLE_CLANG=0
 export ENABLE_TRITON=1
-SUBDIRS="triton"
 
-# 是否默认清理构建目录 (--clean / --no-clean)
+# Default clean behavior for the build script.
+# Can be overridden with command-line flags (--clean or --no-clean).
 export DEFAULT_DO_CLEAN="--clean"
 
-# ==========================================
-# 2. 目标平台与并发设置
-# ==========================================
-# 平台选择: "x86" 或 "rv" (RISC-V)
-export PLATFORM="rv"
-REMOTE_URL="user@192.168.15.167" # 根据远程平台做修改
-# REMOTE_URL="user@192.168.15.175" # 根据远程平台做修改
-REMOTE_BASE="/home/user/triton-benchmark/build-rv" # 根据远程平台做修改
 
-# 编译线程数
+# ==========================================
+# 2. Target Platform and Remote Execution
+# ==========================================
+# Target platform: "x86" or "rv" (for RISC-V).
+export PLATFORM="rv"
+
+# Remote machine configuration for running RISC-V benchmarks.
+# Ensure you have passwordless SSH access to this machine.
+REMOTE_URL="user@192.168.15.167"
+# REMOTE_URL="user@192.168.15.175"
+REMOTE_BASE="/home/user/triton-benchmark/build-rv"
+
+
+# ==========================================
+# 3. Concurrency and Benchmark Selection
+# ==========================================
+# Number of parallel threads for compilation.
 export MAX_MULTITHREADING=8
+
+# Space-separated list of thread counts to use for running benchmarks.
+# Example: "1 2 4 8"
 export THREADS_LIST="1"
 
-# ==========================================
-# 3. 基准测试列表 (Benchmarks)
-# ==========================================
-# 在这里列出你想运行的测试名称，用空格分隔
-# 示例: "add matmul softmax layernorm correlation dropout resize rope warp"
-# export BENCHMARKS_LIST="matmul softmax layernorm correlation dropout resize rope warp"
+# Space-separated list of benchmarks to build and run.
+# Example: "add matmul softmax layernorm correlation dropout resize rope warp"
 export BENCHMARKS_LIST="matmul"
-export MODE="Benchmark"
+
+export MODE="Benchmark" # Or "Validation", "Test", etc.
+
 
 # ==========================================
-# 4. 路径设置 (根据你的环境修改)
+# 4. Paths and Directories
 # ==========================================
-# 源码目录 (通常不需要改，除非你移动了脚本)
-DIR_PATH=$(dirname $(readlink -f "$0")) # 获取当前脚本绝对路径
+# Base directory of the benchmark suite.
+# This is determined automatically and should not need changes.
+DIR_PATH=$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")
 export SRC_DIR="${DIR_PATH}/src"
 export TRITON_PLUGIN_DIRS="${DIR_PATH}/triton-cpu"
 
-# LLVM 与工具链路径
+# Python executable for generating Triton kernels.
+export PYTHON_EXECUTABLE="python"
+
+# Scripts to be copied to the remote machine for execution.
+export SCRIPTS_TO_COPY="run.sh report.sh global_config.sh"
+
+# LLVM and toolchain paths.
 export LLVM_BUILD_DIR="${DIR_PATH}/llvm-project/build"
 if [ "$PLATFORM" = "rv" ]; then
-  # RISC-V 工具链路径
+  # RISC-V toolchain paths
   export CLANG_BUILD_DIR="${DIR_PATH}/llvm-project/build-86b69c-rv"
-  export RISCV_GNU_TOOLCHAIN_DIR="/home/buddy-team-share/spacemit-toolchain-linux-glibc-x86_64-v1.0.1"
+  export RISCV_GNU_TOOLCHAIN_DIR="/home/zxl/spacemit-toolchain-linux-glibc-x86_64-v1.0.1"
 else
-  # x86 工具链路径
+  # x86 toolchain paths
   export CLANG_BUILD_DIR="${DIR_PATH}/llvm-project/build"
   export GCC_X86_BUILD_DIR="/usr"
 fi
 
+
 # ==========================================
-# 5. 编译器参数 (高级设置)
+# 5. Compiler Flags (Advanced)
 # ==========================================
-# 通用 C++ 标准
+# Common C++ standard.
 export CPP_STD="-std=c++17"
 
-# x86 优化参数
+# Optimization flags for x86.
 export X86_FLAGS="-march=native -fvectorize -fslp-vectorize -O3"
 
-# RISC-V 优化参数
+# Optimization flags for RISC-V.
 export RV_FLAGS="-march=rv64gcv -fvectorize -fslp-vectorize -O3"
 export RV_GCC_FLAGS="-march=rv64gcv_zvl256b -mabi=lp64d -O3"
