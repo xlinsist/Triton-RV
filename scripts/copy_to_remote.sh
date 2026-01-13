@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 
 # This script copies necessary build artifacts and scripts to the remote machine for execution.
 
@@ -37,17 +38,15 @@ echo "Ensuring remote base directory exists at ${REMOTE_URL}:${REMOTE_BASE}"
 ssh "${REMOTE_URL}" "mkdir -p ${REMOTE_BASE}"
 
 # Copy the OpenMP sysroot for RISC-V platform.
-if [ "$PLATFORM" = "rv" ]; then
-    echo "Copying openmp-sysroot-riscv to ${REMOTE_BASE}"
-    rsync -avz --ignore-existing \
-      "${DIR}/openmp-sysroot-riscv/" \
-      "${REMOTE_URL}:${REMOTE_BASE}/openmp-sysroot-riscv/"
-fi
+echo "Copying openmp-sysroot-riscv to ${REMOTE_BASE}"
+rsync -avz --ignore-existing \
+  "${OPENMP_LIB_DIR}" \
+  "${REMOTE_URL}:${REMOTE_BASE}"
 
 # Copy compiled artifacts for each benchmark.
 for BENCHMARK in "${BENCHMARKS[@]}"; do
   REMOTE_BIN_BASE="${REMOTE_BASE}/build-${BENCHMARK}/bin"
-  LOCAL_BIN_DIR="${DIR}/build-${BENCHMARK}/bin"
+  LOCAL_BIN_DIR="${ROOT_DIR}/build-${BENCHMARK}/bin"
 
   for COMPILER in "${COMPILERS[@]}"; do
     # Path to the specific benchmark's compiled output for the current compiler.
@@ -73,7 +72,7 @@ done
 # Copy utility scripts to the remote machine.
 echo "Copying utility scripts to ${REMOTE_URL}:${REMOTE_BASE}/"
 for SCRIPT in "${SCRIPTS[@]}"; do
-    if [ -f "${DIR}/${SCRIPT}" ]; then
+    if [ -f "${ROOT_DIR}/scripts/${SCRIPT}" ]; then
         echo "  - Copying ${SCRIPT}"
         scp "${DIR}/${SCRIPT}" "${REMOTE_URL}:${REMOTE_BASE}/"
     else

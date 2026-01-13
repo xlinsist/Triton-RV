@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 
 # This script builds the Triton benchmarks. It handles code generation for Triton
 # kernels, compilation, and linking against the necessary libraries.
@@ -92,7 +93,7 @@ build_support_lib() {
   local lib_dir=$2
   
   echo "  -> Building support library..."
-  ${CXX} -fPIC -I "${DIR}/include" -c "${SRC_DIR}/support/support.cpp" -o "${obj_dir}/support.o"
+  ${CXX} -fPIC -I "${INCLUDE_DIR}" -c "${SRC_DIR}/support/support.cpp" -o "${obj_dir}/support.o"
   ${OBJDUMP} -d "${obj_dir}/support.o" &> "${obj_dir}/support.s"
   ${AR} rcs "${lib_dir}/libsupport.a" "${obj_dir}/support.o"
 }
@@ -190,7 +191,7 @@ build_triton_benchmark() {
         for kernel_launcher in "${tunning_dir}"/*.cpp; do
             local lname
             lname=$(basename "${kernel_launcher}" .cpp)
-            ${CXX} -I "${DIR}/include" -I "${kernel_launcher_include_dir}" -c "${kernel_launcher}" \
+            ${CXX} -I "${INCLUDE_DIR}" -I "${kernel_launcher_include_dir}" -c "${kernel_launcher}" \
                 -fopenmp -o "${current_obj_dir}/${lname}.o"
         done
 
@@ -199,8 +200,8 @@ build_triton_benchmark() {
             xargs ${AR} rcs "${lib_dir}/libkernel_${tunning_arg}_${block_shape}.a"
         
         # D. Link the driver with the libraries to create the final executable.
-        ${CXX} "${driver_file}" -I "${DIR}/include" -I "${kernel_launcher_include_dir}" \
-            -L "${lib_dir}" -fopenmp -L"${CLANG_BUILD_DIR}/lib" \
+        ${CXX} "${driver_file}" -I "${INCLUDE_DIR}" -I "${kernel_launcher_include_dir}" \
+            -L "${lib_dir}" -fopenmp -L"${OPENMP_LIB_DIR}/lib" \
             -lkernel_${tunning_arg}_${block_shape} -lsupport -latomic \
             ${CPP_STD} -DTRITON_KERNEL_ENABLE -fPIC \
             -o "${kernel_bin_dir}/${kernel_py_name}_${tunning_arg}_${block_shape}.elf"
@@ -253,7 +254,7 @@ for BENCHMARK in "${BENCHMARKS[@]}"; do
   fi
 
   # Set the root build directory for the current benchmark.
-  BUILD_DIR="${DIR}/build-${BENCHMARK}"
+  BUILD_DIR="${ROOT_DIR}/build-${BENCHMARK}"
   
   # Execute the build process for this benchmark.
   build_triton_benchmark "$BENCHMARK" "$TRITON_KERNEL" "$DRIVER" "$TUNNING_ARG"

@@ -16,7 +16,9 @@ source "${DIR}/global_config.sh"
 
 # Prepend the OpenMP sysroot library path for RISC-V.
 if [ "$PLATFORM" = "rv" ]; then
-    export LD_LIBRARY_PATH="${DIR}/openmp-sysroot-riscv/lib:$LD_LIBRARY_PATH"
+    export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:${REMOTE_BASE}/openmp-sysroot-riscv/lib"
+    echo "Updated LD_LIBRARY_PATH to include OpenMP sysroot."
+    echo "  New LD_LIBRARY_PATH: $LD_LIBRARY_PATH"
 fi
 
 # Convert space-separated lists from config into bash arrays.
@@ -45,7 +47,11 @@ echo "Starting benchmark run..."
 # Iterate over each benchmark.
 for BENCHMARK in "${BENCHMARKS[@]}"; do
   echo "--- Processing Benchmark: ${BENCHMARK} ---"
-  BUILD_DIR="${DIR}/build-${BENCHMARK}"
+  if [ "$PLATFORM" = "rv" ]; then
+    BUILD_DIR="${DIR}/build-${BENCHMARK}"
+  else
+    BUILD_DIR="${ROOT_DIR}/build-${BENCHMARK}"
+  fi
   BIN_DIR="${BUILD_DIR}/bin"
 
   # Iterate over each enabled compiler.

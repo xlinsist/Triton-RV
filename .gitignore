@@ -4,7 +4,6 @@
 .vscode
 .vs
 
-
 # Vim
 *.swp
 
@@ -18,7 +17,18 @@
 
 test_openmp*
 
-build
-*.bak
-
+# Triton builds
+build*
+build-*
 *.png
+*.csv
+*.bk
+*.log
+
+# thirdparty
+thirdparty/llvm-project
+thirdparty/triton-cpu
+spacemit-toolchain-linux-glibc-x86_64-v1.0.1
+
+# misc
+GEMINI.md

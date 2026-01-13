@@ -22,12 +22,11 @@ export ENABLE_TRITON=1
 # Can be overridden with command-line flags (--clean or --no-clean).
 export DEFAULT_DO_CLEAN="--clean"
 
-
 # ==========================================
 # 2. Target Platform and Remote Execution
 # ==========================================
 # Target platform: "x86" or "rv" (for RISC-V).
-export PLATFORM="rv"
+export PLATFORM="x86"
 
 # Remote machine configuration for running RISC-V benchmarks.
 # Ensure you have passwordless SSH access to this machine.
@@ -35,6 +34,8 @@ REMOTE_URL="user@192.168.15.167"
 # REMOTE_URL="user@192.168.15.175"
 REMOTE_BASE="/home/user/triton-benchmark/build-rv"
 
+# Scripts to be copied to the remote machine for execution.
+export SCRIPTS_TO_COPY="execute.sh report.sh global_config.sh"
 
 # ==========================================
 # 3. Concurrency and Benchmark Selection
@@ -57,29 +58,29 @@ export MODE="Benchmark" # Or "Validation", "Test", etc.
 # 4. Paths and Directories
 # ==========================================
 # Base directory of the benchmark suite.
-# This is determined automatically and should not need changes.
 DIR_PATH=$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")
-export SRC_DIR="${DIR_PATH}/src"
-export TRITON_PLUGIN_DIRS="${DIR_PATH}/triton-cpu"
+export ROOT_DIR="$(dirname "${DIR_PATH}")"
+export SRC_DIR="${ROOT_DIR}/src"
+export INCLUDE_DIR="${ROOT_DIR}/include"
+export THIRD_PARTY_DIR="${ROOT_DIR}/thirdparty"
 
 # Python executable for generating Triton kernels.
 export PYTHON_EXECUTABLE="python"
-
-# Scripts to be copied to the remote machine for execution.
-export SCRIPTS_TO_COPY="run.sh report.sh global_config.sh"
+export TRITON_PLUGIN_DIRS="${THIRD_PARTY_DIR}/triton-cpu"
 
 # LLVM and toolchain paths.
-export LLVM_BUILD_DIR="${DIR_PATH}/llvm-project/build"
+export LLVM_BUILD_DIR="${THIRD_PARTY_DIR}/llvm-project/build-86b69c3-rv-clang"
 if [ "$PLATFORM" = "rv" ]; then
   # RISC-V toolchain paths
-  export CLANG_BUILD_DIR="${DIR_PATH}/llvm-project/build-86b69c-rv"
-  export RISCV_GNU_TOOLCHAIN_DIR="/home/zxl/spacemit-toolchain-linux-glibc-x86_64-v1.0.1"
+  export CLANG_BUILD_DIR="${THIRD_PARTY_DIR}/llvm-project/build-86b69c3-rv-clang"
+  export OPENMP_LIB_DIR="${THIRD_PARTY_DIR}/openmp-sysroot-riscv"
+  export RISCV_GNU_TOOLCHAIN_DIR="${THIRD_PARTY_DIR}/spacemit-toolchain-linux-glibc-x86_64-v1.0.1"
 else
   # x86 toolchain paths
-  export CLANG_BUILD_DIR="${DIR_PATH}/llvm-project/build"
+  export CLANG_BUILD_DIR="${THIRD_PARTY_DIR}/llvm-project/build-86b69c3"
+  export OPENMP_LIB_DIR="${CLANG_BUILD_DIR}/lib"
   export GCC_X86_BUILD_DIR="/usr"
 fi
-
 
 # ==========================================
 # 5. Compiler Flags (Advanced)

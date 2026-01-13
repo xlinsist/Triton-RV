@@ -21,7 +21,7 @@ for BENCHMARK in "${BENCHMARKS[@]}"; do
     # Define remote and local paths.
     REMOTE_REPORT_PATH="${REMOTE_BASE}/build-${BENCHMARK}/report.xls"
     REMOTE_TARGET="${REMOTE_URL}:${REMOTE_REPORT_PATH}"
-    LOCAL_BUILD_DIR="${DIR}/build-${BENCHMARK}/"
+    LOCAL_BUILD_DIR="${ROOT_DIR}/build-${BENCHMARK}/"
 
     echo "  - Copying report for ${BENCHMARK} from ${REMOTE_TARGET} to ${LOCAL_BUILD_DIR}"
 

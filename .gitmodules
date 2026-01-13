@@ -1,6 +1,0 @@
-[submodule "benchmarks/triton-cpu"]
-	path = benchmarks/triton-cpu
-	url = https://github.com/xlinsist/triton-cpu.git
-[submodule "benchmarks/llvm-project"]
-	path = benchmarks/llvm-project
-	url = https://github.com/llvm/llvm-project.git
